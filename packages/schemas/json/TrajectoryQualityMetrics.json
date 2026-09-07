@@ -1,0 +1,33 @@
+{
+  "description": "Flight path continuity and baseline overlap indicators.",
+  "properties": {
+    "gps_continuity_score": {
+      "description": "GPS gap and dropout absence score (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Gps Continuity Score",
+      "type": "number"
+    },
+    "speed_variance_score": {
+      "description": "Velocity vector smoothness score (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Speed Variance Score",
+      "type": "number"
+    },
+    "baseline_overlap_score": {
+      "description": "Inter-frame baseline overlap score (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Baseline Overlap Score",
+      "type": "number"
+    }
+  },
+  "required": [
+    "gps_continuity_score",
+    "speed_variance_score",
+    "baseline_overlap_score"
+  ],
+  "title": "TrajectoryQualityMetrics",
+  "type": "object"
+}

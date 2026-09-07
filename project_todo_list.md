@@ -42,7 +42,7 @@
 
 ---
 
-### TASK-003: Implement TypeScript Type Generation from Pydantic Contracts
+### TASK-003: Implement TypeScript Type Generation from Pydantic Contracts [COMPLETED]
 - **Prerequisites:** TASK-002 completed.
 - **Description:** Establish an automated type synchronization pipeline that converts the shared Pydantic models into TypeScript definitions for `apps/web`.
 - **Implementation Steps:**

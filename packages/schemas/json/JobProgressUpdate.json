@@ -1,0 +1,143 @@
+{
+  "$defs": {
+    "GPUStatistics": {
+      "description": "Real-time GPU worker performance snapshot.",
+      "properties": {
+        "gpu_utilization_pct": {
+          "default": 0.0,
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Gpu Utilization Pct",
+          "type": "number"
+        },
+        "vram_used_mb": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Vram Used Mb",
+          "type": "number"
+        },
+        "vram_total_mb": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Vram Total Mb",
+          "type": "number"
+        },
+        "temperature_celsius": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature Celsius"
+        }
+      },
+      "title": "GPUStatistics",
+      "type": "object"
+    },
+    "JobState": {
+      "description": "The 15 canonical reconstruction job lifecycle states defined in PRD Section 30.",
+      "enum": [
+        "QUEUED",
+        "VALIDATING",
+        "EXTRACTING_FRAMES",
+        "ESTIMATING_POSE",
+        "ESTIMATING_DEPTH",
+        "SEGMENTING",
+        "FUSING",
+        "RECONSTRUCTING",
+        "TEXTURING",
+        "GEOREFERENCING",
+        "QUALITY_CHECK",
+        "GENERATING_TILES",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED"
+      ],
+      "title": "JobState",
+      "type": "string"
+    }
+  },
+  "description": "Real-time progress telemetry streamed over WebSocket to frontend clients.",
+  "properties": {
+    "job_id": {
+      "format": "uuid",
+      "title": "Job Id",
+      "type": "string"
+    },
+    "state": {
+      "$ref": "#/$defs/JobState"
+    },
+    "stage": {
+      "description": "Human-readable active stage description",
+      "title": "Stage",
+      "type": "string"
+    },
+    "progress_percent": {
+      "description": "Overall job progress percentage (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Progress Percent",
+      "type": "number"
+    },
+    "frames_processed": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Frames Processed",
+      "type": "integer"
+    },
+    "frames_total": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Frames Total",
+      "type": "integer"
+    },
+    "gpu_stats": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GPUStatistics"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "estimated_seconds_remaining": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Estimated Seconds Remaining"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "state",
+    "stage",
+    "progress_percent"
+  ],
+  "title": "JobProgressUpdate",
+  "type": "object"
+}

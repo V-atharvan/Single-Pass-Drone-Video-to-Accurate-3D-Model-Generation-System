@@ -1,0 +1,49 @@
+{
+  "$defs": {
+    "QualityPreset": {
+      "description": "Reconstruction resolution and processing density preset.",
+      "enum": [
+        "LOW",
+        "BALANCED",
+        "HIGH"
+      ],
+      "title": "QualityPreset",
+      "type": "string"
+    }
+  },
+  "description": "Payload for submitting a new reconstruction job.",
+  "properties": {
+    "flight_id": {
+      "format": "uuid",
+      "title": "Flight Id",
+      "type": "string"
+    },
+    "quality_preset": {
+      "$ref": "#/$defs/QualityPreset",
+      "default": "BALANCED"
+    },
+    "target_crs": {
+      "default": "EPSG:4326",
+      "description": "Target Coordinate Reference System (e.g. EPSG:4326 or UTM)",
+      "title": "Target Crs",
+      "type": "string"
+    },
+    "enable_dynamic_removal": {
+      "default": true,
+      "description": "Detect and mask moving vehicles/pedestrians",
+      "title": "Enable Dynamic Removal",
+      "type": "boolean"
+    },
+    "enable_semantics": {
+      "default": true,
+      "description": "Classify scene elements (buildings, terrain, roads)",
+      "title": "Enable Semantics",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "flight_id"
+  ],
+  "title": "ReconstructionJobCreate",
+  "type": "object"
+}

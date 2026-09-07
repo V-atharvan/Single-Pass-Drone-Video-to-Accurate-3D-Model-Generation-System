@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "ExportFormat": {
+      "description": "Supported export file formats matching PRD Section 26 and Design Doc Section 21.",
+      "enum": [
+        "GLB",
+        "OBJ",
+        "PLY",
+        "LAS",
+        "LAZ",
+        "TILES_3D",
+        "DEM_TIF",
+        "DSM_TIF"
+      ],
+      "title": "ExportFormat",
+      "type": "string"
+    }
+  },
+  "description": "Registered 3D file asset associated with a model.",
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "model_id": {
+      "format": "uuid",
+      "title": "Model Id",
+      "type": "string"
+    },
+    "asset_type": {
+      "$ref": "#/$defs/ExportFormat"
+    },
+    "s3_key": {
+      "title": "S3 Key",
+      "type": "string"
+    },
+    "file_size_bytes": {
+      "minimum": 0,
+      "title": "File Size Bytes",
+      "type": "integer"
+    },
+    "lod_level": {
+      "anyOf": [
+        {
+          "maximum": 2,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lod Level"
+    }
+  },
+  "required": [
+    "id",
+    "model_id",
+    "asset_type",
+    "s3_key",
+    "file_size_bytes"
+  ],
+  "title": "ModelAsset",
+  "type": "object"
+}

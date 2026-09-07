@@ -118,7 +118,11 @@ importers:
 
   apps/api: {}
 
-  apps/web: {}
+  apps/web:
+    dependencies:
+      '@single-pass-3d/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
 
   packages/geospatial: {}
 

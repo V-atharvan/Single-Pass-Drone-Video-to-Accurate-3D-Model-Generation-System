@@ -1,0 +1,38 @@
+{
+  "description": "Real-time GPU worker performance snapshot.",
+  "properties": {
+    "gpu_utilization_pct": {
+      "default": 0.0,
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Gpu Utilization Pct",
+      "type": "number"
+    },
+    "vram_used_mb": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Vram Used Mb",
+      "type": "number"
+    },
+    "vram_total_mb": {
+      "default": 0.0,
+      "minimum": 0.0,
+      "title": "Vram Total Mb",
+      "type": "number"
+    },
+    "temperature_celsius": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Temperature Celsius"
+    }
+  },
+  "title": "GPUStatistics",
+  "type": "object"
+}

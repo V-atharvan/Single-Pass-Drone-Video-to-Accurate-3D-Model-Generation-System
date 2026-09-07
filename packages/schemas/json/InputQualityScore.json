@@ -1,0 +1,171 @@
+{
+  "$defs": {
+    "QualityClassification": {
+      "description": "Categorical classification of dataset suitability.",
+      "enum": [
+        "HIGH",
+        "MODERATE",
+        "LOW"
+      ],
+      "title": "QualityClassification",
+      "type": "string"
+    },
+    "TrajectoryQualityMetrics": {
+      "description": "Flight path continuity and baseline overlap indicators.",
+      "properties": {
+        "gps_continuity_score": {
+          "description": "GPS gap and dropout absence score (0-100)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Gps Continuity Score",
+          "type": "number"
+        },
+        "speed_variance_score": {
+          "description": "Velocity vector smoothness score (0-100)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Speed Variance Score",
+          "type": "number"
+        },
+        "baseline_overlap_score": {
+          "description": "Inter-frame baseline overlap score (0-100)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Baseline Overlap Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "gps_continuity_score",
+        "speed_variance_score",
+        "baseline_overlap_score"
+      ],
+      "title": "TrajectoryQualityMetrics",
+      "type": "object"
+    },
+    "VisualQualityMetrics": {
+      "description": "Computer-vision visual quality indicators.",
+      "properties": {
+        "blur_score": {
+          "description": "Laplacian variance sharpness metric (0-100)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Blur Score",
+          "type": "number"
+        },
+        "exposure_score": {
+          "description": "Luminance balance and exposure metric (0-100)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Exposure Score",
+          "type": "number"
+        },
+        "texture_score": {
+          "description": "Spatial gradient detail density (0-100)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Texture Score",
+          "type": "number"
+        },
+        "compression_score": {
+          "default": 100.0,
+          "description": "Compression artifact absence score (0-100)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Compression Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "blur_score",
+        "exposure_score",
+        "texture_score"
+      ],
+      "title": "VisualQualityMetrics",
+      "type": "object"
+    }
+  },
+  "description": "Comprehensive pre-flight data validation report matching PRD FR-005 and Design Doc Section 12.",
+  "properties": {
+    "overall_score": {
+      "description": "Weighted aggregate quality score (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Overall Score",
+      "type": "number"
+    },
+    "classification": {
+      "$ref": "#/$defs/QualityClassification"
+    },
+    "video_quality_percent": {
+      "description": "Video quality score (0-100%)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Video Quality Percent",
+      "type": "number"
+    },
+    "gps_quality_percent": {
+      "description": "GPS quality score (0-100%)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Gps Quality Percent",
+      "type": "number"
+    },
+    "motion_blur_percent": {
+      "description": "Sharpness score (0-100%)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Motion Blur Percent",
+      "type": "number"
+    },
+    "scene_texture_percent": {
+      "description": "Texture density score (0-100%)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Scene Texture Percent",
+      "type": "number"
+    },
+    "camera_metadata_complete": {
+      "default": true,
+      "description": "Whether camera parameters were detected",
+      "title": "Camera Metadata Complete",
+      "type": "boolean"
+    },
+    "expected_quality": {
+      "$ref": "#/$defs/QualityClassification"
+    },
+    "visual_metrics": {
+      "$ref": "#/$defs/VisualQualityMetrics"
+    },
+    "trajectory_metrics": {
+      "$ref": "#/$defs/TrajectoryQualityMetrics"
+    },
+    "warnings": {
+      "description": "Actionable pre-flight warnings",
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "is_reconstructible": {
+      "description": "Whether dataset meets minimum threshold for processing",
+      "title": "Is Reconstructible",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "overall_score",
+    "classification",
+    "video_quality_percent",
+    "gps_quality_percent",
+    "motion_blur_percent",
+    "scene_texture_percent",
+    "expected_quality",
+    "visual_metrics",
+    "trajectory_metrics",
+    "is_reconstructible"
+  ],
+  "title": "InputQualityScore",
+  "type": "object"
+}

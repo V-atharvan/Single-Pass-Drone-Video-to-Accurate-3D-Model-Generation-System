@@ -1,0 +1,122 @@
+{
+  "description": "Raw and interpolated GPS coordinate records.",
+  "properties": {
+    "latitude": {
+      "description": "Latitude in decimal degrees (WGS84)",
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Latitude",
+      "type": "number"
+    },
+    "longitude": {
+      "description": "Longitude in decimal degrees (WGS84)",
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Longitude",
+      "type": "number"
+    },
+    "altitude_msl": {
+      "description": "Altitude above Mean Sea Level in meters",
+      "title": "Altitude Msl",
+      "type": "number"
+    },
+    "altitude_relative": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Takeoff-relative altitude in meters",
+      "title": "Altitude Relative"
+    },
+    "speed_mps": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Ground speed in meters per second",
+      "title": "Speed Mps"
+    },
+    "heading_deg": {
+      "anyOf": [
+        {
+          "exclusiveMaximum": 360.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Compass heading in degrees [0, 360)",
+      "title": "Heading Deg"
+    },
+    "timestamp_offset_seconds": {
+      "description": "Elapsed seconds from video start",
+      "minimum": 0.0,
+      "title": "Timestamp Offset Seconds",
+      "type": "number"
+    },
+    "hdop": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Horizontal Dilution of Precision",
+      "title": "Hdop"
+    },
+    "vdop": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Vertical Dilution of Precision",
+      "title": "Vdop"
+    },
+    "num_satellites": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Locked satellite count",
+      "title": "Num Satellites"
+    }
+  },
+  "required": [
+    "latitude",
+    "longitude",
+    "altitude_msl",
+    "timestamp_offset_seconds"
+  ],
+  "title": "GPSRecord",
+  "type": "object"
+}

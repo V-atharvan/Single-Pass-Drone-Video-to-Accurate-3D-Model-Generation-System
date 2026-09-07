@@ -1,0 +1,289 @@
+{
+  "$defs": {
+    "AccuracyReport": {
+      "description": "Quantitative reconstruction accuracy report matching PRD Section 39.",
+      "properties": {
+        "overall_quality_score": {
+          "description": "Overall model score (0-100)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Overall Quality Score",
+          "type": "number"
+        },
+        "horizontal_rmse_meters": {
+          "description": "Horizontal RMSE in meters (PRD target <= 0.5m)",
+          "minimum": 0.0,
+          "title": "Horizontal Rmse Meters",
+          "type": "number"
+        },
+        "vertical_rmse_meters": {
+          "description": "Vertical RMSE in meters (PRD target <= 0.75m)",
+          "minimum": 0.0,
+          "title": "Vertical Rmse Meters",
+          "type": "number"
+        },
+        "coverage_percent": {
+          "description": "Observable surface coverage % (PRD target >= 90%)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Coverage Percent",
+          "type": "number"
+        },
+        "dynamic_contamination_percent": {
+          "description": "Moving-object residual % (PRD target < 5%)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Dynamic Contamination Percent",
+          "type": "number"
+        },
+        "observed_surface_percent": {
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Observed Surface Percent",
+          "type": "number"
+        },
+        "partially_observed_percent": {
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Partially Observed Percent",
+          "type": "number"
+        },
+        "ai_inferred_percent": {
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Ai Inferred Percent",
+          "type": "number"
+        },
+        "pose_confidence": {
+          "$ref": "#/$defs/ConfidenceLevel",
+          "default": "HIGH"
+        },
+        "depth_confidence": {
+          "$ref": "#/$defs/ConfidenceLevel",
+          "default": "HIGH"
+        },
+        "geolocation_confidence": {
+          "$ref": "#/$defs/ConfidenceLevel",
+          "default": "MEDIUM"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "reference_data_used": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reference Data Used",
+          "type": "array"
+        }
+      },
+      "required": [
+        "overall_quality_score",
+        "horizontal_rmse_meters",
+        "vertical_rmse_meters",
+        "coverage_percent",
+        "dynamic_contamination_percent",
+        "observed_surface_percent",
+        "partially_observed_percent",
+        "ai_inferred_percent"
+      ],
+      "title": "AccuracyReport",
+      "type": "object"
+    },
+    "BoundingBox": {
+      "description": "Geographic bounding box in decimal degrees and elevation.",
+      "properties": {
+        "min_latitude": {
+          "maximum": 90.0,
+          "minimum": -90.0,
+          "title": "Min Latitude",
+          "type": "number"
+        },
+        "max_latitude": {
+          "maximum": 90.0,
+          "minimum": -90.0,
+          "title": "Max Latitude",
+          "type": "number"
+        },
+        "min_longitude": {
+          "maximum": 180.0,
+          "minimum": -180.0,
+          "title": "Min Longitude",
+          "type": "number"
+        },
+        "max_longitude": {
+          "maximum": 180.0,
+          "minimum": -180.0,
+          "title": "Max Longitude",
+          "type": "number"
+        },
+        "min_altitude": {
+          "title": "Min Altitude",
+          "type": "number"
+        },
+        "max_altitude": {
+          "title": "Max Altitude",
+          "type": "number"
+        }
+      },
+      "required": [
+        "min_latitude",
+        "max_latitude",
+        "min_longitude",
+        "max_longitude",
+        "min_altitude",
+        "max_altitude"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "ConfidenceLevel": {
+      "description": "Categorical confidence rating.",
+      "enum": [
+        "HIGH",
+        "MEDIUM",
+        "LOW"
+      ],
+      "title": "ConfidenceLevel",
+      "type": "string"
+    },
+    "ExportFormat": {
+      "description": "Supported export file formats matching PRD Section 26 and Design Doc Section 21.",
+      "enum": [
+        "GLB",
+        "OBJ",
+        "PLY",
+        "LAS",
+        "LAZ",
+        "TILES_3D",
+        "DEM_TIF",
+        "DSM_TIF"
+      ],
+      "title": "ExportFormat",
+      "type": "string"
+    },
+    "ModelAsset": {
+      "description": "Registered 3D file asset associated with a model.",
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "model_id": {
+          "format": "uuid",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "asset_type": {
+          "$ref": "#/$defs/ExportFormat"
+        },
+        "s3_key": {
+          "title": "S3 Key",
+          "type": "string"
+        },
+        "file_size_bytes": {
+          "minimum": 0,
+          "title": "File Size Bytes",
+          "type": "integer"
+        },
+        "lod_level": {
+          "anyOf": [
+            {
+              "maximum": 2,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lod Level"
+        }
+      },
+      "required": [
+        "id",
+        "model_id",
+        "asset_type",
+        "s3_key",
+        "file_size_bytes"
+      ],
+      "title": "ModelAsset",
+      "type": "object"
+    }
+  },
+  "description": "Authoritative metadata record for a reconstructed 3D scene.",
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "project_id": {
+      "format": "uuid",
+      "title": "Project Id",
+      "type": "string"
+    },
+    "job_id": {
+      "format": "uuid",
+      "title": "Job Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "crs": {
+      "default": "EPSG:4326",
+      "title": "Crs",
+      "type": "string"
+    },
+    "bbox": {
+      "$ref": "#/$defs/BoundingBox"
+    },
+    "center_latitude": {
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Center Latitude",
+      "type": "number"
+    },
+    "center_longitude": {
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Center Longitude",
+      "type": "number"
+    },
+    "accuracy_report": {
+      "$ref": "#/$defs/AccuracyReport"
+    },
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/ModelAsset"
+      },
+      "title": "Assets",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "project_id",
+    "job_id",
+    "name",
+    "bbox",
+    "center_latitude",
+    "center_longitude",
+    "accuracy_report"
+  ],
+  "title": "ModelMetadata",
+  "type": "object"
+}

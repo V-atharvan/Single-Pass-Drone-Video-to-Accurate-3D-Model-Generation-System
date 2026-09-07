@@ -1,0 +1,75 @@
+{
+  "$defs": {
+    "MeasurementType": {
+      "description": "Supported interactive measurement tools matching Design Doc Section 17.",
+      "enum": [
+        "DISTANCE",
+        "HEIGHT",
+        "AREA",
+        "VOLUME"
+      ],
+      "title": "MeasurementType",
+      "type": "string"
+    }
+  },
+  "description": "User-created geospatial measurement.",
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "model_id": {
+      "format": "uuid",
+      "title": "Model Id",
+      "type": "string"
+    },
+    "user_id": {
+      "format": "uuid",
+      "title": "User Id",
+      "type": "string"
+    },
+    "type": {
+      "$ref": "#/$defs/MeasurementType"
+    },
+    "value": {
+      "description": "Measured quantity value",
+      "title": "Value",
+      "type": "number"
+    },
+    "unit": {
+      "description": "Measurement unit (e.g. 'm', 'm\u00b2', 'm\u00b3')",
+      "title": "Unit",
+      "type": "string"
+    },
+    "estimated_error_margin": {
+      "description": "Uncertainty margin (\u00b1value)",
+      "minimum": 0.0,
+      "title": "Estimated Error Margin",
+      "type": "number"
+    },
+    "points_geojson": {
+      "additionalProperties": true,
+      "description": "GeoJSON geometry of points/polygon",
+      "title": "Points Geojson",
+      "type": "object"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "model_id",
+    "user_id",
+    "type",
+    "value",
+    "unit",
+    "estimated_error_margin",
+    "points_geojson"
+  ],
+  "title": "MeasurementResult",
+  "type": "object"
+}

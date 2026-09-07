@@ -1,0 +1,59 @@
+{
+  "description": "Optimized 6-Degrees-of-Freedom camera extrinsic pose.",
+  "properties": {
+    "frame_index": {
+      "description": "Extracted keyframe sequential index",
+      "minimum": 0,
+      "title": "Frame Index",
+      "type": "integer"
+    },
+    "timestamp_offset_seconds": {
+      "description": "Video timestamp offset",
+      "minimum": 0.0,
+      "title": "Timestamp Offset Seconds",
+      "type": "number"
+    },
+    "rotation_matrix": {
+      "description": "3x3 orthonormal rotation matrix from camera to world frame",
+      "items": {
+        "items": {
+          "type": "number"
+        },
+        "type": "array"
+      },
+      "title": "Rotation Matrix",
+      "type": "array"
+    },
+    "translation_vector": {
+      "description": "3-element translation vector [x, y, z] in world coordinates (meters)",
+      "items": {
+        "type": "number"
+      },
+      "title": "Translation Vector",
+      "type": "array"
+    },
+    "reprojection_error_px": {
+      "description": "Feature reprojection error RMSE in pixels",
+      "minimum": 0.0,
+      "title": "Reprojection Error Px",
+      "type": "number"
+    },
+    "pose_confidence": {
+      "description": "Pose certainty score (0-100%)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Pose Confidence",
+      "type": "number"
+    }
+  },
+  "required": [
+    "frame_index",
+    "timestamp_offset_seconds",
+    "rotation_matrix",
+    "translation_vector",
+    "reprojection_error_px",
+    "pose_confidence"
+  ],
+  "title": "CameraPose",
+  "type": "object"
+}

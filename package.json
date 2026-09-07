@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
+    "build:types": "turbo build:types",
     "lint": "turbo lint",
     "check-types": "turbo check-types",
     "test": "turbo test",

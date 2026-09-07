@@ -1,0 +1,47 @@
+{
+  "description": "Geographic bounding box in decimal degrees and elevation.",
+  "properties": {
+    "min_latitude": {
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Min Latitude",
+      "type": "number"
+    },
+    "max_latitude": {
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Max Latitude",
+      "type": "number"
+    },
+    "min_longitude": {
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Min Longitude",
+      "type": "number"
+    },
+    "max_longitude": {
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Max Longitude",
+      "type": "number"
+    },
+    "min_altitude": {
+      "title": "Min Altitude",
+      "type": "number"
+    },
+    "max_altitude": {
+      "title": "Max Altitude",
+      "type": "number"
+    }
+  },
+  "required": [
+    "min_latitude",
+    "max_latitude",
+    "min_longitude",
+    "max_longitude",
+    "min_altitude",
+    "max_altitude"
+  ],
+  "title": "BoundingBox",
+  "type": "object"
+}

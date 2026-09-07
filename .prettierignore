@@ -5,3 +5,5 @@ build/
 .turbo/
 pnpm-lock.yaml
 *.md
+packages/schemas/ts/src/
+packages/schemas/json/

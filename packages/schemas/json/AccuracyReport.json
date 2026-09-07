@@ -1,0 +1,106 @@
+{
+  "$defs": {
+    "ConfidenceLevel": {
+      "description": "Categorical confidence rating.",
+      "enum": [
+        "HIGH",
+        "MEDIUM",
+        "LOW"
+      ],
+      "title": "ConfidenceLevel",
+      "type": "string"
+    }
+  },
+  "description": "Quantitative reconstruction accuracy report matching PRD Section 39.",
+  "properties": {
+    "overall_quality_score": {
+      "description": "Overall model score (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Overall Quality Score",
+      "type": "number"
+    },
+    "horizontal_rmse_meters": {
+      "description": "Horizontal RMSE in meters (PRD target <= 0.5m)",
+      "minimum": 0.0,
+      "title": "Horizontal Rmse Meters",
+      "type": "number"
+    },
+    "vertical_rmse_meters": {
+      "description": "Vertical RMSE in meters (PRD target <= 0.75m)",
+      "minimum": 0.0,
+      "title": "Vertical Rmse Meters",
+      "type": "number"
+    },
+    "coverage_percent": {
+      "description": "Observable surface coverage % (PRD target >= 90%)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Coverage Percent",
+      "type": "number"
+    },
+    "dynamic_contamination_percent": {
+      "description": "Moving-object residual % (PRD target < 5%)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Dynamic Contamination Percent",
+      "type": "number"
+    },
+    "observed_surface_percent": {
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Observed Surface Percent",
+      "type": "number"
+    },
+    "partially_observed_percent": {
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Partially Observed Percent",
+      "type": "number"
+    },
+    "ai_inferred_percent": {
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Ai Inferred Percent",
+      "type": "number"
+    },
+    "pose_confidence": {
+      "$ref": "#/$defs/ConfidenceLevel",
+      "default": "HIGH"
+    },
+    "depth_confidence": {
+      "$ref": "#/$defs/ConfidenceLevel",
+      "default": "HIGH"
+    },
+    "geolocation_confidence": {
+      "$ref": "#/$defs/ConfidenceLevel",
+      "default": "MEDIUM"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "reference_data_used": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Reference Data Used",
+      "type": "array"
+    }
+  },
+  "required": [
+    "overall_quality_score",
+    "horizontal_rmse_meters",
+    "vertical_rmse_meters",
+    "coverage_percent",
+    "dynamic_contamination_percent",
+    "observed_surface_percent",
+    "partially_observed_percent",
+    "ai_inferred_percent"
+  ],
+  "title": "AccuracyReport",
+  "type": "object"
+}

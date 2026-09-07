@@ -1,0 +1,88 @@
+{
+  "description": "Pinhole camera intrinsic calibration model with Brown-Conrady radial distortion.",
+  "properties": {
+    "fx": {
+      "description": "Focal length x in pixels",
+      "exclusiveMinimum": 0.0,
+      "title": "Fx",
+      "type": "number"
+    },
+    "fy": {
+      "description": "Focal length y in pixels",
+      "exclusiveMinimum": 0.0,
+      "title": "Fy",
+      "type": "number"
+    },
+    "cx": {
+      "description": "Principal point x in pixels",
+      "exclusiveMinimum": 0.0,
+      "title": "Cx",
+      "type": "number"
+    },
+    "cy": {
+      "description": "Principal point y in pixels",
+      "exclusiveMinimum": 0.0,
+      "title": "Cy",
+      "type": "number"
+    },
+    "width": {
+      "description": "Image sensor width in pixels",
+      "exclusiveMinimum": 0,
+      "title": "Width",
+      "type": "integer"
+    },
+    "height": {
+      "description": "Image sensor height in pixels",
+      "exclusiveMinimum": 0,
+      "title": "Height",
+      "type": "integer"
+    },
+    "k1": {
+      "default": 0.0,
+      "description": "First radial distortion coefficient",
+      "title": "K1",
+      "type": "number"
+    },
+    "k2": {
+      "default": 0.0,
+      "description": "Second radial distortion coefficient",
+      "title": "K2",
+      "type": "number"
+    },
+    "p1": {
+      "default": 0.0,
+      "description": "First tangential distortion coefficient",
+      "title": "P1",
+      "type": "number"
+    },
+    "p2": {
+      "default": 0.0,
+      "description": "Second tangential distortion coefficient",
+      "title": "P2",
+      "type": "number"
+    },
+    "sensor_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Camera/sensor model identifier",
+      "title": "Sensor Name"
+    }
+  },
+  "required": [
+    "fx",
+    "fy",
+    "cx",
+    "cy",
+    "width",
+    "height"
+  ],
+  "title": "CameraIntrinsics",
+  "type": "object"
+}

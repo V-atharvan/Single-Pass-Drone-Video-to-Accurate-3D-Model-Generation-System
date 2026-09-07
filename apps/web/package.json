@@ -8,5 +8,8 @@
     "lint": "echo \"Linting apps/web\"",
     "check-types": "echo \"Checking types apps/web\"",
     "test": "echo \"Testing apps/web\""
+  },
+  "dependencies": {
+    "@single-pass-3d/schemas": "workspace:*"
   }
 }

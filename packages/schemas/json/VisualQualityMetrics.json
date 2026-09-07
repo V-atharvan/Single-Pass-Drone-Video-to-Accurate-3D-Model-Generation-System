@@ -1,0 +1,41 @@
+{
+  "description": "Computer-vision visual quality indicators.",
+  "properties": {
+    "blur_score": {
+      "description": "Laplacian variance sharpness metric (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Blur Score",
+      "type": "number"
+    },
+    "exposure_score": {
+      "description": "Luminance balance and exposure metric (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Exposure Score",
+      "type": "number"
+    },
+    "texture_score": {
+      "description": "Spatial gradient detail density (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Texture Score",
+      "type": "number"
+    },
+    "compression_score": {
+      "default": 100.0,
+      "description": "Compression artifact absence score (0-100)",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Compression Score",
+      "type": "number"
+    }
+  },
+  "required": [
+    "blur_score",
+    "exposure_score",
+    "texture_score"
+  ],
+  "title": "VisualQualityMetrics",
+  "type": "object"
+}

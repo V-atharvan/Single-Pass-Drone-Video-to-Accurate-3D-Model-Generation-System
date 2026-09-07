@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "Quaternion": {
+      "description": "Unit quaternion representing 3D spatial rotation.",
+      "properties": {
+        "w": {
+          "description": "Scalar component",
+          "title": "W",
+          "type": "number"
+        },
+        "x": {
+          "description": "Vector component x",
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "Vector component y",
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "description": "Vector component z",
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "w",
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "Quaternion",
+      "type": "object"
+    }
+  },
+  "description": "Inertial Measurement Unit telemetry record.",
+  "properties": {
+    "roll_deg": {
+      "description": "Roll in degrees",
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Roll Deg",
+      "type": "number"
+    },
+    "pitch_deg": {
+      "description": "Pitch in degrees",
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Pitch Deg",
+      "type": "number"
+    },
+    "yaw_deg": {
+      "description": "Yaw in degrees",
+      "exclusiveMaximum": 360.0,
+      "minimum": 0.0,
+      "title": "Yaw Deg",
+      "type": "number"
+    },
+    "quaternion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Quaternion"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Orientation quaternion"
+    },
+    "timestamp_offset_seconds": {
+      "description": "Elapsed seconds from video start",
+      "minimum": 0.0,
+      "title": "Timestamp Offset Seconds",
+      "type": "number"
+    }
+  },
+  "required": [
+    "roll_deg",
+    "pitch_deg",
+    "yaw_deg",
+    "timestamp_offset_seconds"
+  ],
+  "title": "IMURecord",
+  "type": "object"
+}

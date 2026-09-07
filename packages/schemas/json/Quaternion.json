@@ -1,0 +1,33 @@
+{
+  "description": "Unit quaternion representing 3D spatial rotation.",
+  "properties": {
+    "w": {
+      "description": "Scalar component",
+      "title": "W",
+      "type": "number"
+    },
+    "x": {
+      "description": "Vector component x",
+      "title": "X",
+      "type": "number"
+    },
+    "y": {
+      "description": "Vector component y",
+      "title": "Y",
+      "type": "number"
+    },
+    "z": {
+      "description": "Vector component z",
+      "title": "Z",
+      "type": "number"
+    }
+  },
+  "required": [
+    "w",
+    "x",
+    "y",
+    "z"
+  ],
+  "title": "Quaternion",
+  "type": "object"
+}
