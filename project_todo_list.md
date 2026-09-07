@@ -29,7 +29,7 @@
 
 ---
 
-### TASK-002: Establish Core Pydantic Schemas in Shared Schemas Package
+### TASK-002: Establish Core Pydantic Schemas in Shared Schemas Package [COMPLETED]
 - **Prerequisites:** TASK-001 completed.
 - **Description:** Define centralized, authoritative data contracts in Python using Pydantic V2 for all domain entities, telemetry records, reconstruction job states, quality metrics, and 3D metadata.
 - **Implementation Steps:**
