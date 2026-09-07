@@ -1,0 +1,12 @@
+{
+  "name": "@single-pass-3d/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"Next.js dev server placeholder for apps/web\"",
+    "build": "echo \"Building apps/web\"",
+    "lint": "echo \"Linting apps/web\"",
+    "check-types": "echo \"Checking types apps/web\"",
+    "test": "echo \"Testing apps/web\""
+  }
+}

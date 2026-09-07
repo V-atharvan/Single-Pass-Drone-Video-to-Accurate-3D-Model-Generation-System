@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "single-pass-3d-geospatial"
+version = "0.1.0"
+description = "Geospatial, CRS transformation, and coordinate calculations for Single-Pass 3D Platform"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "shapely>=2.0.4",
+    "pyproj>=3.6.1",
+    "numpy>=1.26.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+]

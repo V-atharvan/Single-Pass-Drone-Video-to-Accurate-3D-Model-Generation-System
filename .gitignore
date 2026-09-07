@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Production builds
+dist/
+build/
+.next/
+out/
+
+# Turborepo
+.turbo/
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+*.lcov
+
+# Environment & Secrets
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+*.pem
+*.key
+
+# Local Data & Reconstruction Scratch
+scratch/
+temp/
+tmp/
+*.las
+*.laz
+*.tif
+*.tiff
+*.ply
+*.glb
+*.obj
+*.mp4
+*.mov
+!docs/*.md
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo

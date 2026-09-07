@@ -1,0 +1,11 @@
+{
+  "name": "@single-pass-3d/shared",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "echo \"Building shared package\"",
+    "lint": "echo \"Linting shared package\"",
+    "check-types": "echo \"Checking shared types\"",
+    "test": "echo \"Testing shared package\""
+  }
+}

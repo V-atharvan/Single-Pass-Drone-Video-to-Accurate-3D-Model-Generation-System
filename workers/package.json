@@ -1,0 +1,11 @@
+{
+  "name": "@single-pass-3d/workers",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "echo \"Building workers container\"",
+    "lint": "echo \"Linting workers\"",
+    "check-types": "echo \"Checking workers types\"",
+    "test": "echo \"Testing workers\""
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@single-pass-3d/geospatial",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "echo \"Building geospatial package\"",
+    "lint": "echo \"Linting geospatial package\"",
+    "check-types": "echo \"Checking geospatial types\"",
+    "test": "echo \"Testing geospatial package\""
+  }
+}

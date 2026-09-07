@@ -1,0 +1,21 @@
+{
+  "name": "single-pass-3d-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Single-Pass Drone Video to Accurate 3D Model Generation Platform",
+  "packageManager": "pnpm@12.3.4",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "check-types": "turbo check-types",
+    "test": "turbo test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.4",
+    "prettier": "^3.5.3"
+  }
+}

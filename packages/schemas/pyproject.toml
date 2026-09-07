@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "single-pass-3d-schemas"
+version = "0.1.0"
+description = "Centralized Pydantic V2 Schemas for Single-Pass 3D Platform"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pydantic-to-typescript>=1.0.10",
+]

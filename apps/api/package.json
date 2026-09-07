@@ -1,0 +1,12 @@
+{
+  "name": "@single-pass-3d/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"Starting FastAPI dev server\"",
+    "build": "echo \"Building API package\"",
+    "lint": "echo \"Linting API service\"",
+    "check-types": "echo \"Checking API types\"",
+    "test": "echo \"Testing API service\""
+  }
+}

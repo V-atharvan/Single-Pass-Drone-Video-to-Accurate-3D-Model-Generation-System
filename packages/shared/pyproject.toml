@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "single-pass-3d-shared"
+version = "0.1.0"
+description = "Shared Python utilities, S3 client, Redis state manager, and OpenTelemetry logging"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.34.0",
+    "aiobotocore>=2.13.0",
+    "redis>=5.0.4",
+    "opentelemetry-api>=1.25.0",
+    "opentelemetry-sdk>=1.25.0",
+    "pydantic>=2.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+]

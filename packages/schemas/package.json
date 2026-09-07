@@ -1,0 +1,11 @@
+{
+  "name": "@single-pass-3d/schemas",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "echo \"Generating TypeScript types from Pydantic schemas\"",
+    "lint": "echo \"Linting schemas\"",
+    "check-types": "echo \"Checking schema types\"",
+    "test": "echo \"Testing schemas\""
+  }
+}
