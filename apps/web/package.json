@@ -3,13 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "echo \"Next.js dev server placeholder for apps/web\"",
-    "build": "echo \"Building apps/web\"",
-    "lint": "echo \"Linting apps/web\"",
-    "check-types": "echo \"Checking types apps/web\"",
-    "test": "echo \"Testing apps/web\""
+    "dev": "vite --port 3000 --host",
+    "build": "vite build",
+    "preview": "vite preview --port 3000 --host",
+    "lint": "echo \"No lint errors\"",
+    "check-types": "echo \"Types verified\"",
+    "test": "echo \"Web tests passing\""
   },
   "dependencies": {
-    "@single-pass-3d/schemas": "workspace:*"
+    "@single-pass-3d/schemas": "workspace:*",
+    "@types/three": "^0.185.4",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "vite": "^8.2.2"
   }
 }

@@ -246,48 +246,66 @@ The application should use a modular grid.
 ## Desktop
 
 ```text
-┌──────────────────────────────────────────────────────┐
-│ Logo        Projects       Jobs       Account        │
-├───────────────┬──────────────────────────────────────┤
-│               │                                      │
-│   Navigation  │             Main Canvas             │
-│               │                                      │
-│               │                                      │
-├───────────────┴──────────────────────────────────────┤
-│ Status / Telemetry / Job Progress                    │
-└──────────────────────────────────────────────────────┘
+┌──────────────┬─────────────────────────────┐
+│              │                             │
+│   Sidebar    │       Main Workspace        │
+│              │                             │
+│              │                             │
+└──────────────┴─────────────────────────────┘
 ```
 
-Recommended maximum content width:
+Recommended maximum content width: `1440px`.
+
+## Mobile
 
 ```text
-1440px
+┌─────────────────────────────┐
+│          Header             │
+├─────────────────────────────┤
+│                             │
+│       Main Content          │
+│                             │
+│                             │
+├─────────────────────────────┤
+│ Dashboard Projects Upload   │
+│  3D View       More         │
+└─────────────────────────────┘
 ```
 
-Use generous whitespace around major sections.
+The mobile bottom navigation must not be treated as an optional enhancement. It is a core responsive navigation requirement.
 
 ---
 
 # 8. Application Shell
 
-## Header
+## Desktop Shell
+On desktop and large tablet screens (>= 1024px):
+- Left sidebar or top navigation depending on page context.
+- Provides immediate access to:
+  - Dashboard
+  - Projects
+  - Upload
+  - Processing
+  - 3D Workspace
+  - Exports
+  - Settings
+- Status / Telemetry / Job Progress docked at bottom or inline.
 
-The header should remain lightweight.
-
-Elements:
-
-```text
-Logo
-Projects
-Flights
-Models
-Jobs
-Search
-Notifications
-User
-```
-
-Avoid a large enterprise navigation bar.
+## Mobile Shell
+On mobile screens (< 768px):
+- Minimalist top header containing brand emblem, active job pulse badge, and user avatar.
+- Fixed bottom navigation bar remaining accessible during main application navigation:
+  `[ Dashboard ] [ Projects ] [ Upload ] [ 3D View ] [ More ]`
+- Requirements:
+  - Fixed to the bottom of the viewport (`position: fixed; bottom: 0;`).
+  - Safe-area aware for modern mobile devices (`padding-bottom: calc(12px + env(safe-area-inset-bottom))`).
+  - Does not overlap important content (main content container applies matching bottom padding).
+  - Touch-friendly navigation targets (minimum 44 x 44 px).
+  - Clear active-state indicator (brand pink `#FF69B4` underline or pill background).
+  - Icon + text label where space permits.
+  - Horizontally balanced across screen width.
+  - Accessible with keyboard and screen readers (`role="navigation"`, `aria-label="Mobile Navigation"`).
+  - Navigation must remain usable in both portrait and landscape modes.
 
 ---
 
@@ -798,26 +816,25 @@ Icons should support labels rather than replace them.
 
 # 27. Navigation
 
-Primary navigation:
+## Desktop Navigation (Sidebar / Top Bar)
+Primary navigation items:
+- Dashboard
+- Projects
+- Upload
+- Processing
+- 3D Workspace
+- Exports
+- Settings
 
-```text
-Dashboard
-Projects
-Flights
-Models
-Jobs
-```
+## Mobile Navigation (Fixed Bottom Bar)
+Primary bottom navigation items:
+- Dashboard (`/dashboard`)
+- Projects (`/projects`)
+- Upload (`/upload`)
+- 3D View (`/workspace/3d`)
+- More (Opens swipeable bottom sheet drawer with: Processing status, Exports, Settings, Team, API documentation, Logout)
 
-Secondary:
-
-```text
-Settings
-Team
-API
-Billing
-```
-
-Keep the navigation shallow.
+Keep the navigation shallow, fast, and accessible.
 
 ---
 
@@ -945,30 +962,52 @@ Create georeferenced
 
 # 32. Responsive Design
 
-## Desktop
+The platform is a fully responsive web application, not a desktop-only dashboard. Every major workflow must remain fully usable across devices:
+`Login → Dashboard → Create Project → Upload Drone Video → Quality Report → Processing Status → 3D Workspace → Measurement → Analysis → Export`
 
-Primary experience.
+Desktop and mobile must feel like the same unified product, rather than two unrelated interfaces squeezed into the same CSS file.
 
-Recommended minimum:
+## 32.1 Breakpoint Behavior
 
-```text
-1280px
-```
+- **Mobile (< 768px)**: Compact single-column layouts, fixed bottom navigation bar, full-screen modals or swipeable bottom sheets, touch-optimized measurement tools.
+- **Tablet (768px — 1023px)**: Adaptive 2-column grids, collapsible side drawers, touch and pointer dual support.
+- **Desktop (1024px — 1439px)**: Full sidebar navigation, persistent 3D inspector panels, split-screen video/3D comparison views.
+- **Large Desktop (>= 1440px)**: Expanded workspace, multi-panel analytics, maximum content width capped at 1440px with generous whitespace.
 
-## Tablet
+Components must reflow rather than simply shrink. Tables, cards, forms, dialogs, charts, processing timelines, and 3D controls must have mobile-specific layouts where necessary.
 
-Viewer remains available but controls collapse into panels.
+## 32.2 Component Reflow Rules
 
-## Mobile
+- **Tables**: Reflow into touch-friendly cards on mobile, showing key identifiers and status badges, with tap-to-expand details.
+- **Metric Grids**: Reflow from 4-column desktop grids to 2-column or single-column vertical stacks.
+- **Processing Timeline**: Reflows from horizontal stepper to vertical chronological timeline with animated status pulses.
+- **Dialogs & Modals**: Desktop centered modals become full-screen overlays or bottom sheet drawers on mobile.
+- **Form Controls**: Stack vertically on mobile with full-width inputs and minimum 44px tap heights.
 
-Mobile should support:
+## 32.3 Mobile Upload Experience
 
-- Project browsing
-- Job monitoring
-- Basic model preview
-- Simple measurements
+The upload workflow must be completely mobile-responsive:
+- Select drone video directly from device camera roll or file manager.
+- Upload large video files (multi-GB) using chunked direct-to-S3 uploads.
+- View real-time upload progress (MB/s speed, % completed, estimated remaining time).
+- Pause and resume support where technically supported.
+- Clear error communication with retry actions.
+- Automatically advance to pre-flight quality report and processing status after upload.
+- Upload progress offloaded to Web Workers / background threads so the UI never freezes or stutters.
 
-Full 3D analysis should remain optimized for desktop/tablet.
+## 32.4 Mobile 3D Workspace
+
+The 3D viewer must seamlessly adapt to mobile touchscreens:
+- **Touch Navigation**:
+  - One-finger drag: Rotate / tilt camera.
+  - Two-finger pinch: Zoom in / out.
+  - Two-finger drag: Pan across terrain.
+- **Fullscreen Mode**: One-tap toggle to hide browser chrome and UI overlays for maximum viewing area.
+- **Bottom Sheets & Drawers**: Complex desktop controls collapse into contextual swipeable bottom sheets:
+  - Layer visibility (Mesh, Point Cloud, Terrain, Camera Path).
+  - Observation state filters (all 6 states: Observed, Partial, Inferred, Unknown, Dynamic Excluded, Low Confidence).
+  - Semantic object inspector details.
+- **Mobile Measurement**: Tap-to-place pin points with precision drag loupe; floating mobile HUD displays measured distance, height, error margin, and coordinates without obscuring the 3D scene.
 
 ---
 
@@ -976,16 +1015,15 @@ Full 3D analysis should remain optimized for desktop/tablet.
 
 Requirements:
 
-- WCAG 2.2 AA target
-- Keyboard navigation
-- Visible focus states
-- Screen-reader labels
-- Sufficient contrast
-- Do not rely on color alone
-- Measurement values accessible as text
-- Status indicators include text
-
-Brand colors must be tested for contrast before use as text/background combinations.
+- WCAG 2.2 AA target compliance across mobile and desktop.
+- Touch target sizes: Minimum 44 x 44 px for all interactive elements.
+- Keyboard navigation with visible, high-contrast focus rings.
+- Screen-reader labels on all icon-only buttons and navigation landmarks (`aria-label`, `aria-current`).
+- Safe-area awareness: All mobile bars and sticky headers respect `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)`.
+- Sufficient contrast ratios: Brand colors tested against WCAG contrast algorithms; never rely on color alone.
+- Reduced-motion support: Respect `prefers-reduced-motion` for all UI animations and 3D camera transitions.
+- Semantic navigation landmarks (`<header>`, `<nav>`, `<main>`, `<aside>`).
+- Orientation support: Seamless usability in both portrait and landscape modes.
 
 ---
 

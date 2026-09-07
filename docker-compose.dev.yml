@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: single-pass-3d-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: single_pass_3d_dev
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d single_pass_3d_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - single_pass_net
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: single-pass-3d-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - single_pass_net
+
+  minio:
+    image: minio/minio:RELEASE.2024-05-10T01-41-38Z
+    container_name: single-pass-3d-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadminpassword
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_dev_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - single_pass_net
+
+  minio-setup:
+    image: minio/mc:RELEASE.2024-05-09T17-04-24Z
+    container_name: single-pass-3d-minio-setup
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO to initialize...';
+      sleep 3;
+      mc alias set myminio http://minio:9000 minioadmin minioadminpassword;
+      mc mb --ignore-existing myminio/single-pass-3d-raw;
+      mc mb --ignore-existing myminio/single-pass-3d-interim;
+      mc mb --ignore-existing myminio/single-pass-3d-models;
+      mc mb --ignore-existing myminio/single-pass-3d-exports;
+      mc anonymous set download myminio/single-pass-3d-models;
+      echo 'MinIO buckets provisioned successfully:';
+      mc ls myminio;
+      exit 0;
+      "
+    networks:
+      - single_pass_net
+
+networks:
+  single_pass_net:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  minio_dev_data:

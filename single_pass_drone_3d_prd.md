@@ -1179,6 +1179,52 @@ Requirements:
 - Secret management
 - Least-privilege IAM
 
+## Responsive Web Application & Mobile Support
+
+The platform is engineered as a first-class, fully responsive web application rather than a desktop-only dashboard. Every major workflow must remain completely operational across:
+- Desktop (>= 1280px)
+- Laptop (1024px — 1279px)
+- Tablet (768px — 1023px)
+- Mobile (< 768px)
+
+### End-to-End Workflow Usability on Mobile
+Every primary operator workflow must be fully usable on mobile:
+Login → Dashboard → Create Project → Upload Drone Video → Quality Report → Processing Status → 3D Workspace → Measurement → Analysis → Export
+
+Desktop and mobile interfaces must feel like the same unified product, sharing visual design tokens, interaction logic, and state management.
+
+### Desktop vs. Mobile Navigation Architecture
+- **Desktop Navigation**: Persistent left sidebar or top navigation depending on view context, providing direct access to:
+  - Dashboard
+  - Projects
+  - Upload
+  - Processing
+  - 3D Workspace
+  - Exports
+  - Settings
+- **Mobile Navigation**: Fixed bottom navigation bar (`[ Dashboard ] [ Projects ] [ Upload ] [ 3D View ] [ More ]`).
+  - Fixed to viewport bottom with device safe-area awareness (`env(safe-area-inset-bottom)`).
+  - Navigation targets must maintain minimum 44 x 44 px touch footprints.
+  - Distinct active-state indicator and semantic navigation landmark (`<nav aria-label="Mobile Navigation">`).
+  - Fully functional across portrait and landscape orientations without obscuring content.
+
+### Mobile Upload Experience
+- Select drone video files directly from device storage or camera roll.
+- Support multi-gigabyte video uploads via chunked direct-to-S3 transfer without freezing the UI thread.
+- Real-time upload progress display (speed in MB/s, percentage completed, estimated remaining time).
+- Pause and resume support for network interruptions.
+- Actionable error feedback and seamless automatic redirection to reconstruction status upon upload completion.
+
+### Mobile 3D Workspace
+- Multi-touch gesture navigation: single-finger rotate/tilt, two-finger pinch-to-zoom, two-finger pan.
+- Fullscreen mode toggle for immersive viewports.
+- Responsive progressive disclosure: desktop sidebars and multi-layer floating toolbars collapse into swipeable bottom sheets and contextual drawers.
+- Mobile access to layer visibility (mesh, point cloud, terrain, camera path), all 6 observation states, coordinate inspector, confidence heatmap, and linear/height measurement tools.
+
+### Breakpoint Reflow & Accessibility
+- Components reflow structurally rather than simply shrinking. Tables transform into touch cards, multi-column metrics stack into structured lists, processing timelines reflow into vertical steppers, and modal dialogs transform into full-screen dialogs or bottom sheets.
+- Full compliance with WCAG 2.2 AA accessibility: visible focus states, screen-reader labels, high-contrast color ratios, and reduced-motion query support (`prefers-reduced-motion`).
+
 ---
 
 # 33. Privacy and Data Governance

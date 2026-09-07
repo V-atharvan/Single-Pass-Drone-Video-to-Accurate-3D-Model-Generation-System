@@ -21,6 +21,7 @@ from .quality import (
     VisualQualityMetrics,
     TrajectoryQualityMetrics,
     InputQualityScore,
+    VideoQualityReport,
 )
 from .models import (
     ObservationState,
@@ -54,6 +55,7 @@ __all__ = [
     "VisualQualityMetrics",
     "TrajectoryQualityMetrics",
     "InputQualityScore",
+    "VideoQualityReport",
     # Models
     "ObservationState",
     "ConfidenceLevel",

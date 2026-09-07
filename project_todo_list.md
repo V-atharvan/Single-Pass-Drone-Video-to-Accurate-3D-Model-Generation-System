@@ -29,16 +29,18 @@
 
 ---
 
-### TASK-002: Establish Core Pydantic Schemas in Shared Schemas Package [COMPLETED]
+### TASK-002: Establish Core Pydantic Schemas in Shared Schemas Package [COMPLETED] [ENHANCED]
 - **Prerequisites:** TASK-001 completed.
-- **Description:** Define centralized, authoritative data contracts in Python using Pydantic V2 for all domain entities, telemetry records, reconstruction job states, quality metrics, and 3D metadata.
+- **Description:** Define centralized, authoritative data contracts in Python using Pydantic V2 for all domain entities, telemetry records, reconstruction job states, quality metrics, and 3D metadata. Enhanced to include all missing sensor schemas, observation state enum, calibration hierarchy, and positioning mode enum.
 - **Implementation Steps:**
   1. In `packages/schemas/python/`, configure `pyproject.toml` with `pydantic>=2.7.0`.
-  2. Implement `telemetry.py`: Define `GPSRecord` (lat, lon, alt_msl, alt_rel, speed, heading, timestamp, accuracy), `IMURecord` (roll, pitch, yaw, q0..q3, timestamp), `CameraIntrinsics` (fx, fy, cx, cy, k1, k2, p1, p2, width, height).
-  3. Implement `jobs.py`: Define `JobState` enum (15 states from PRD: `QUEUED`, `VALIDATING`, `EXTRACTING_FRAMES`, `ESTIMATING_POSE`, `ESTIMATING_DEPTH`, `SEGMENTING`, `FUSING`, `RECONSTRUCTING`, `TEXTURING`, `GEOREFERENCING`, `QUALITY_CHECK`, `GENERATING_TILES`, `COMPLETED`, `FAILED`, `CANCELLED`), `QualityPreset` enum (`LOW`, `BALANCED`, `HIGH`), and `JobProgressUpdate`.
-  4. Implement `quality.py`: Define `InputQualityScore` (overall, video_score, gps_score, blur_score, texture_score, overlap_score, warnings).
-  5. Implement `models.py`: Define `ModelMetadata`, `AccuracyReport` (rmse_horizontal, rmse_vertical, coverage_pct, observed_pct, inferred_pct, confidence_score), and `MeasurementResult`.
-- **Definition of Done:** Pytest suite in `packages/schemas/python/tests/` passes validation tests for valid and malformed domain payloads.
+  2. Implement `telemetry.py`: Define `GPSRecord` (lat, lon, alt_msl, alt_rel, speed, heading, timestamp, accuracy, hdop, vdop), `IMURecord` (roll, pitch, yaw, q0..q3, timestamp), `CameraIntrinsics` (fx, fy, cx, cy, k1, k2, p1, p2, width, height), **`BarometerRecord`** (pressure_hpa, altitude_baro_m, temperature_c, timestamp) — optional sensor; system must function without it.
+  3. Implement `jobs.py`: Define `JobState` enum (15 states from PRD), `QualityPreset` enum (`LOW`, `BALANCED`, `HIGH`), `JobProgressUpdate`, and **`PositioningMode`** enum (`RTK_PPK`, `RTK`, `GPS_IMU`, `GPS_ONLY`, `GPS_DEGRADED`, `VISUAL_ONLY`) — reported in AccuracyReport and used to set uncertainty expectations.
+  4. Implement `quality.py`: Define `InputQualityScore` (overall, video_score, gps_score, blur_score, texture_score, overlap_score, **compression_score**, **shadow_score**, **illumination_score**, warnings, component_warnings).
+  5. Implement `models.py`: Define `ModelMetadata`, `ComponentConfidence` (geometry_confidence, depth_confidence, pose_confidence, geolocation_confidence, texture_confidence — all 0-100 float), `AccuracyReport` (rmse_horizontal, rmse_vertical, scale_error_pct, coverage_pct, observed_pct, partial_pct, inferred_pct, dynamic_excluded_pct, unknown_pct, low_confidence_pct, confidence_score, positioning_mode, ground_control_used, estimated_horizontal_uncertainty_m, estimated_vertical_uncertainty_m), and `MeasurementResult` (value, error_margin, observation_state_at_point).
+  6. Implement **`observation.py`**: Define `ObservationState` enum with exactly 6 values — `OBSERVED`, `PARTIAL`, `INFERRED`, `UNKNOWN`, `DYNAMIC_EXCLUDED`, `LOW_CONFIDENCE`. INFERRED geometry must never be labeled as measured/observed anywhere in the system.
+  7. Implement **`calibration.py`**: Define `CalibrationSource` enum (`USER_PROVIDED`, `KNOWN_PROFILE`, `ESTIMATED`), `CameraCalibration` (intrinsics, distortion_coefficients, calibration_source, calibration_confidence_0_100, sensor_width_mm, sensor_height_mm, camera_model_name). Calibration quality must propagate into reconstruction confidence.
+- **Definition of Done:** Pytest suite in `packages/schemas/python/tests/` passes validation tests for valid and malformed domain payloads including all new enums and models.
 
 ---
 
@@ -53,7 +55,7 @@
 
 ---
 
-### TASK-004: Containerized Local Infrastructure Setup
+### TASK-004: Containerized Local Infrastructure Setup [COMPLETED]
 - **Prerequisites:** TASK-003 completed.
 - **Description:** Build a reproducible local development environment using Docker Compose for PostgreSQL with PostGIS, Redis, and MinIO (emulating Amazon S3).
 - **Implementation Steps:**
@@ -66,27 +68,27 @@
 
 ---
 
-### TASK-005: PostgreSQL Database Schema Definition and Migration Scripts
+### TASK-005: PostgreSQL Database Schema Definition and Migration Scripts [COMPLETED] [ENHANCED]
 - **Prerequisites:** TASK-004 completed.
-- **Description:** Create the relational and geospatial database schema using SQLAlchemy 2.0 and Alembic migrations.
+- **Description:** Create the relational and geospatial database schema using SQLAlchemy 2.0 and Alembic migrations. Enhanced to include all missing sensor and confidence columns.
 - **Implementation Steps:**
   1. In `apps/api/`, configure `alembic` targeting the PostGIS database.
   2. Define tables:
      - `organizations` (id, name, created_at)
      - `users` (id, org_id, email, full_name, role, auth0_sub, created_at)
      - `projects` (id, org_id, name, description, location_name, crs, bbox geometry(Polygon, 4326), tags, created_at, updated_at)
-     - `flights` (id, project_id, original_filename, s3_video_key, s3_telemetry_key, duration_seconds, fps, resolution_width, resolution_height, total_frames, status, created_at)
-     - `flight_telemetry` (id, flight_id, timestamp_offset, location geometry(PointZ, 4326), altitude_msl, heading, speed, raw_json)
-     - `reconstruction_jobs` (id, flight_id, org_id, status, quality_preset, current_stage, progress, error_message, started_at, completed_at)
-     - `models` (id, job_id, project_id, name, crs, bbox geometry(Polygon, 4326), center_lat, center_lon, min_altitude, max_altitude, coverage_percent, confidence_score, position_rmse, vertical_rmse, s3_prefix, status, created_at)
-     - `model_assets` (id, model_id, asset_type enum [`GLB`, `OBJ`, `PLY`, `LAS`, `TILES_3D`, `DEM_TIF`], s3_key, file_size_bytes, lod_level)
-     - `measurements` (id, model_id, user_id, type enum [`DISTANCE`, `HEIGHT`, `AREA`, `VOLUME`], geometry_json, value, error_margin, created_at)
+     - `flights` (id, project_id, original_filename, s3_video_key, s3_telemetry_key, duration_seconds, fps, resolution_width, resolution_height, total_frames, status, **video_quality_report_json**, **has_barometric_altitude**, **has_rtk_corrections**, created_at)
+     - `flight_telemetry` (id, flight_id, timestamp_offset, location geometry(PointZ, 4326), altitude_msl, **altitude_barometric_m**, heading, speed, raw_json) — altitude_barometric_m nullable; null means barometric data unavailable
+     - `reconstruction_jobs` (id, flight_id, org_id, status, quality_preset, **positioning_mode**, **rtk_corrections_used**, current_stage, progress, error_message, started_at, completed_at)
+     - `models` (id, job_id, project_id, name, crs, bbox geometry(Polygon, 4326), center_lat, center_lon, min_altitude, max_altitude, coverage_percent, observed_pct, partial_pct, inferred_pct, dynamic_excluded_pct, unknown_pct, low_confidence_pct, **geometry_confidence**, **depth_confidence**, **pose_confidence**, **geolocation_confidence**, **texture_confidence**, confidence_score, position_rmse, vertical_rmse, **estimated_h_uncertainty_m**, **estimated_v_uncertainty_m**, **positioning_mode**, **scale_source**, **ground_control_used**, s3_prefix, status, **reconstruction_version**, **sensor_config_json**, created_at)
+     - `model_assets` (id, model_id, asset_type enum [`GLB`, `OBJ`, `PLY`, `LAS`, `TILES_3D`, `DEM_TIF`, `DSM_TIF`], s3_key, file_size_bytes, lod_level)
+     - `measurements` (id, model_id, user_id, type enum [`DISTANCE`, `HEIGHT`, `AREA`, `VOLUME`], geometry_json, value, error_margin, **observation_state_at_point**, created_at)
   3. Execute `alembic upgrade head`.
-- **Definition of Done:** Migration applies cleanly against the PostGIS container; spatial indices (`GIST`) are verified on `bbox` and `location` columns.
+- **Definition of Done:** Migration applies cleanly against the PostGIS container; spatial indices (`GIST`) are verified on `bbox` and `location` columns; all new nullable columns exist.
 
 ---
 
-### TASK-006: S3 Object Storage Client & Key Structure Provisioner
+### TASK-006: S3 Object Storage Client & Key Structure Provisioner [COMPLETED]
 - **Prerequisites:** TASK-005 completed.
 - **Description:** Implement a standardized storage utility wrapper in Python around `boto3` / `aiobotocore` enforcing bucket structure rules from the tech stack doc.
 - **Implementation Steps:**
@@ -101,7 +103,7 @@
 
 ---
 
-### TASK-007: Redis Client and Distributed State Tracker
+### TASK-007: Redis Client and Distributed State Tracker [COMPLETED]
 - **Prerequisites:** TASK-006 completed.
 - **Description:** Implement a high-performance Redis client for transient job state caching, worker heartbeats, and pub/sub message propagation.
 - **Implementation Steps:**
@@ -113,7 +115,7 @@
 
 ---
 
-### TASK-008: OpenTelemetry Instrumentation Baseline
+### TASK-008: OpenTelemetry Instrumentation Baseline [COMPLETED]
 - **Prerequisites:** TASK-007 completed.
 - **Description:** Set up centralized OpenTelemetry tracing and structured logging for both the API and background workers.
 - **Implementation Steps:**
@@ -126,7 +128,7 @@
 
 ## Phase 2: Backend Control Plane API & Authentication
 
-### TASK-009: FastAPI Application Bootstrap and Health Probes
+### TASK-009: FastAPI Application Bootstrap and Health Probes [COMPLETED]
 - **Prerequisites:** TASK-008 completed.
 - **Description:** Initialize the FastAPI REST application with standard middleware, CORS, lifecycle management, and health endpoints.
 - **Implementation Steps:**
@@ -138,7 +140,7 @@
 
 ---
 
-### TASK-010: Auth0 JWT Authentication and Token Validation Middleware
+### TASK-010: Auth0 JWT Authentication and Token Validation Middleware [COMPLETED]
 - **Prerequisites:** TASK-009 completed.
 - **Description:** Implement security middleware to validate Auth0 RS256 Bearer JWT tokens, extract claims, and map to local user identities.
 - **Implementation Steps:**
@@ -148,7 +150,7 @@
 
 ---
 
-### TASK-011: Multi-Tenant RBAC Authorization Guard
+### TASK-011: Multi-Tenant RBAC Authorization Guard [COMPLETED]
 - **Prerequisites:** TASK-010 completed.
 - **Description:** Implement authorization checks enforcing hierarchical resource ownership: `Organization -> Project -> Flight -> Model -> Asset`.
 - **Implementation Steps:**
@@ -162,7 +164,7 @@
 
 ---
 
-### TASK-012: Organizations and Users Management Endpoints
+### TASK-012: Organizations and Users Management Endpoints [COMPLETED]
 - **Prerequisites:** TASK-011 completed.
 - **Description:** Implement REST endpoints for managing organizations, member invitations, and role assignments.
 - **Implementation Steps:**
@@ -174,7 +176,7 @@
 
 ---
 
-### TASK-013: Projects CRUD API Endpoints
+### TASK-013: Projects CRUD API Endpoints [COMPLETED]
 - **Prerequisites:** TASK-012 completed.
 - **Description:** Implement project management endpoints including spatial bounding box updates and metadata filtering.
 - **Implementation Steps:**
@@ -188,7 +190,7 @@
 
 ---
 
-### TASK-014: S3 Pre-Signed Direct Upload URL Service
+### TASK-014: S3 Pre-Signed Direct Upload URL Service [COMPLETED]
 - **Prerequisites:** TASK-013 completed.
 - **Description:** Implement endpoints to facilitate secure, direct-to-S3 multi-gigabyte video and GPS file uploads without routing raw binary through FastAPI.
 - **Implementation Steps:**
@@ -201,7 +203,7 @@
 
 ---
 
-### TASK-015: Flights Registration and Metadata Linkage Endpoints
+### TASK-015: Flights Registration and Metadata Linkage Endpoints [COMPLETED]
 - **Prerequisites:** TASK-014 completed.
 - **Description:** Implement endpoints to register an uploaded video and GPS file as a cohesive flight asset ready for validation.
 - **Implementation Steps:**
@@ -213,7 +215,7 @@
 
 ---
 
-### TASK-016: Reconstruction Job Submission & State Machine API
+### TASK-016: Reconstruction Job Submission & State Machine API [COMPLETED]
 - **Prerequisites:** TASK-015 completed.
 - **Description:** Implement endpoints to start, inspect, and cancel 3D reconstruction jobs.
 - **Implementation Steps:**
@@ -225,7 +227,7 @@
 
 ---
 
-### TASK-017: Real-Time WebSocket Server for Job Status Streaming
+### TASK-017: Real-Time WebSocket Server for Job Status Streaming [COMPLETED]
 - **Prerequisites:** TASK-016 completed.
 - **Description:** Implement WebSocket endpoint streaming realtime progress updates from Redis pub/sub to frontend clients.
 - **Implementation Steps:**
@@ -239,7 +241,7 @@
 
 ## Phase 3: Flight Ingestion & Pre-Flight Quality Assessment Engine
 
-### TASK-018: Reconstruction Worker Dispatcher & SQS Consumer Loop
+### TASK-018: Reconstruction Worker Dispatcher & SQS Consumer Loop [COMPLETED]
 - **Prerequisites:** TASK-017 completed.
 - **Description:** Build the asynchronous Python worker daemon that polls SQS, acquires job locks, and orchestrates pipeline execution.
 - **Implementation Steps:**
@@ -247,47 +249,54 @@
   2. Poll SQS queue with long-polling (20s).
   3. On message receive: parse `job_id`, fetch job and flight records from PostgreSQL, mark job state as `VALIDATING` in DB and Redis.
   4. Provide graceful SIGTERM handling to release or requeue stalled jobs.
-- **Definition of Done:** Worker pulls a test message from the queue, updates PostgreSQL job status to `VALIDATING`, and logs the trace ID.
+- **Definition of Done:** Worker pulls a test message from the queue, updates PostgreSQL job status to `VALIDATING`, and logs the trace.
 
----
-
-### TASK-019: Video File Validation & Stream Integrity Probing
+### TASK-019: Video File Validation, Stream Integrity Probing & Compression Quality Assessment [COMPLETED] [ENHANCED]
 - **Prerequisites:** TASK-018 completed.
-- **Description:** Build the video validation module using FFprobe / OpenCV to inspect video codec, resolution, frame rate, container integrity, and audio/timestamp tracks.
+- **Description:** Build the video validation module using FFprobe / OpenCV to inspect video codec, resolution, frame rate, container integrity, and produce a complete VideoQualityReport including compression artifact analysis.
 - **Implementation Steps:**
-  1. In `workers/preprocessing/video_validator.py`, implement `validate_video_stream(local_video_path: Path) -> VideoMetadata`.
+  1. In `workers/preprocessing/video_validator.py`, implement `validate_video_stream(local_video_path: Path) -> VideoQualityReport`.
   2. Verify video format (`MP4`, `MOV`), codec (`H.264`, `H.265/HEVC`), minimum resolution (1080p), duration, and valid frame count.
   3. Detect corrupted frames, missing moov atoms, or variable framerate anomalies.
-  4. Update `flights` row with detected width, height, fps, total_frames, and duration.
-- **Definition of Done:** Tested against valid 4K/1080p MP4s and corrupt/truncated video files; corrupt files trigger actionable error: `"Unsupported codec or truncated video file"`.
+  4. **[ENHANCED]** Measure bitrate (average and peak) using FFprobe stream analysis; flag very low bitrate (< 8 Mbps for 1080p, < 25 Mbps for 4K) as HIGH_COMPRESSION.
+  5. **[ENHANCED]** Detect block/DCT compression artifacts: sample 10 evenly-spaced I-frames, compute blocky patch variance using 8x8 grid analysis; produce `compression_artifact_score` [0..100] where 0=severe artifacts.
+  6. **[ENHANCED]** Estimate per-frame noise using Laplacian-based signal-to-noise estimate; produce `noise_score` [0..100].
+  7. **[ENHANCED]** Detect I-frame/keyframe spacing from stream metadata; flag if average GOP (Group of Pictures) > 60 frames as poor for reconstruction.
+  8. **[ENHANCED]** Produce full `VideoQualityReport`: {resolution, fps, codec, bitrate_mbps, avg_gop_size, blur_score, compression_artifact_score, noise_score, exposure_score, frame_usability_pct, gps_availability, metadata_completeness_score}.
+  9. Update `flights` row with detected width, height, fps, total_frames, duration, and `video_quality_report_json`.
+- **Definition of Done:** Tested against valid 4K/1080p MP4s and corrupt/truncated/high-compression video files; VideoQualityReport JSON matches schema; high-compression inputs produce compression_artifact_score < 60.
 
 ---
 
-### TASK-020: Flight Telemetry and GPS Extractor & Time Synchronizer
+### TASK-020: Flight Telemetry, GPS, Barometric Altitude Extractor & Time Synchronizer [COMPLETED] [ENHANCED]
 - **Prerequisites:** TASK-019 completed.
-- **Description:** Parse uploaded GPS and flight metadata files (CSV, JSON, NMEA, DJI SRT/subtitle stream) and synchronize coordinates with video frame timestamps.
+- **Description:** Parse uploaded GPS and flight metadata files (CSV, JSON, NMEA, DJI SRT/subtitle stream) and synchronize coordinates with video frame timestamps. Enhanced to extract barometric altitude and flag RTK/PPK data presence.
 - **Implementation Steps:**
   1. In `workers/preprocessing/telemetry_parser.py`, implement parser for DJI SRT format, CSV, and standard JSON telemetry.
-  2. Extract timestamps, latitude, longitude, altitude (MSL and relative), heading, gimbal pitch/roll/yaw, and horizontal/vertical dilution of precision (HDOP/VDOP).
-  3. Perform linear / spline interpolation of GPS fixes to match video keyframe timestamps.
-  4. Populate `flight_telemetry` rows in PostgreSQL with PostGIS `PointZ` coordinates.
-- **Definition of Done:** An SRT/CSV telemetry sample is parsed and produces synchronized GPS records for every second of video; missing GPS records trigger a `"GPS timestamp mismatch"` error.
+  2. Extract timestamps, latitude, longitude, altitude (MSL and relative), heading, gimbal pitch/roll/yaw, HDOP/VDOP.
+  3. **[ENHANCED]** Extract `barometric_altitude_m` where present (DJI SRT field `baro`, CSV column `baro_alt`, or JSON key `baroAlt`); set to `null` if unavailable. Do NOT treat barometric altitude as absolute survey-grade elevation without calibration.
+  4. **[ENHANCED]** Detect presence of RTK/PPK correction data fields (DJI RTK fields, `.obs`/`.nav` RINEX files, separate RTK CSV); set `has_rtk_corrections = True` on the flight record.
+  5. Perform linear/spline interpolation of GPS fixes to match video keyframe timestamps.
+  6. Populate `flight_telemetry` rows including `altitude_barometric_m` column.
+- **Definition of Done:** SRT/CSV telemetry sample parsed; barometric altitude populated where available and null where not; RTK flag correctly set; GPS records synchronized per second.
 
 ---
 
-### TASK-021: Visual Quality Metric Evaluator (Blur, Exposure, Texture)
+### TASK-021: Visual Quality Metric Evaluator (Blur, Exposure, Texture, Shadow, Illumination) [COMPLETED] [ENHANCED]
 - **Prerequisites:** TASK-020 completed.
-- **Description:** Implement computer-vision algorithms to assess frame quality, motion blur, underexposure, overexposure, and scene texture.
+- **Description:** Implement computer-vision algorithms to assess frame quality, motion blur, exposure, scene texture, shadow coverage, and illumination variance. All scores feed the Input Quality Score.
 - **Implementation Steps:**
   1. In `workers/preprocessing/quality_evaluator.py`, implement:
-     - Blur score: Laplacian variance across frames (`cv2.Laplacian(gray, cv2.CV_64F).var()`).
-     - Exposure check: Luminance histogram distribution; flag underexposed (<15% luminance) or overexposed (>85% saturation) frames.
-     - Texture score: Spatial gradient density (Sobel operator) to detect low-texture surfaces like blank roofs or water.
-- **Definition of Done:** Unit test processes test frames (sharp, blurred, dark, overexposed) and outputs normalized scores [0..100] accurately classifying degraded frames.
+     - **Blur score:** Laplacian variance across frames (`cv2.Laplacian(gray, cv2.CV_64F).var()`).
+     - **Exposure check:** Luminance histogram distribution; flag underexposed (< 15% luminance) or overexposed (> 85% saturation) frames.
+     - **Texture score:** Spatial gradient density (Sobel operator) to detect low-texture surfaces.
+     - **[ENHANCED] Shadow score:** Compute the ratio of pixels in the shadow luminance band (< 30% of scene median luminance) across sampled frames; output `shadow_coverage_pct` and `shadow_score` [0..100] where 0 = heavy shadows dominating scene.
+     - **[ENHANCED] Illumination variance score:** Measure frame-to-frame mean luminance standard deviation to detect rapid auto-exposure transitions; high variance = low `illumination_score`.
+- **Definition of Done:** Unit test processes sharp/blurred/dark/overexposed/shadow-heavy frames and outputs normalized scores [0..100] accurately classifying all frame types.
 
 ---
 
-### TASK-022: Flight Trajectory Continuity and Overlap Quality Estimator
+### TASK-022: Flight Trajectory Continuity and Overlap Quality Estimator [COMPLETED]
 - **Prerequisites:** TASK-021 completed.
 - **Description:** Evaluate drone flight trajectory consistency, speed spikes, GPS gaps, and estimated visual overlap between successive views.
 - **Implementation Steps:**
@@ -298,22 +307,31 @@
 
 ---
 
-### TASK-023: Input Quality Score Synthesizer and Pre-Flight Quality Report
+### TASK-023: Input Quality Score Synthesizer and Pre-Flight Quality Report [COMPLETED] [ENHANCED]
 - **Prerequisites:** TASK-022 completed.
-- **Description:** Aggregate visual and trajectory metrics into an authoritative 0-100 Input Quality Score, write results to DB, and notify the frontend.
+- **Description:** Aggregate visual, compression, and trajectory metrics into an authoritative 0-100 Input Quality Score, write results to DB, and notify the frontend. Enhanced formula includes compression and shadow components.
 - **Implementation Steps:**
   1. In `workers/preprocessing/quality_synthesizer.py`, compute weighted score:
-     $$\text{Score} = 0.35 \cdot \text{Blur} + 0.25 \cdot \text{GPS} + 0.20 \cdot \text{Texture} + 0.10 \cdot \text{Exposure} + 0.10 \cdot \text{Overlap}$$
-  2. Classify expected result: `HIGH` (>=80), `MODERATE` (60-79), `LOW` (<60).
-  3. Persist `InputQualityScore` into `flights.quality_report_json`.
-  4. If score < 40 or critical data missing, mark job `FAILED` with specific actionable remediation instructions; otherwise proceed to keyframe extraction.
-- **Definition of Done:** A mock flight run generates the exact output schema from PRD FR-005 and sends a WebSocket message to the client.
+     ```
+     Score = 0.28*Blur + 0.20*GPS + 0.15*Texture + 0.12*Compression + 0.10*Exposure
+           + 0.08*Shadow + 0.07*Illumination
+     ```
+     (weights are configurable; no single factor should silently zero out the score)
+  2. Classify expected result: `HIGH` (>= 80), `MODERATE` (60-79), `LOW` (< 60).
+  3. **[ENHANCED]** Produce component-level warnings for each sub-score below threshold:
+     - blur_score < 60: `"HIGH_MOTION_BLUR"`
+     - compression_score < 50: `"HIGH_VIDEO_COMPRESSION — recommend higher bitrate source"`
+     - shadow_score < 40: `"HEAVY_SHADOWS — texture and depth confidence will be reduced in shadow regions"`
+     - gps_score < 50: `"POOR_GPS — georeferencing accuracy reduced"`
+  4. Persist `InputQualityScore` into `flights.video_quality_report_json`.
+  5. If overall score < 40 or critical data missing (video corrupt, GPS entirely absent), mark job `FAILED` with specific actionable remediation instructions; otherwise proceed.
+- **Definition of Done:** Mock flight run generates exact output schema from PRD FR-005; WebSocket message sent; high-compression + shadow-heavy test video produces appropriate sub-score warnings.
 
 ---
 
 ## Phase 4: Keyframe Selection, Camera Poses & Sensor Fusion
 
-### TASK-024: Keyframe Selection Engine with Preset Control
+### TASK-024: Keyframe Selection Engine with Preset Control [COMPLETED]
 - **Prerequisites:** TASK-023 completed.
 - **Description:** Implement an intelligent keyframe extractor that avoids redundant frames while ensuring optimal visual overlap and sharpness according to quality presets.
 - **Implementation Steps:**
@@ -328,7 +346,7 @@
 
 ---
 
-### TASK-025: Keyframe Disk and Storage Caching Pipeline
+### TASK-025: Keyframe Disk and Storage Caching Pipeline [COMPLETED]
 - **Prerequisites:** TASK-024 completed.
 - **Description:** Extract selected keyframes at native resolution to local high-speed NVMe scratch storage and upload thumbnails to S3.
 - **Implementation Steps:**
@@ -339,7 +357,7 @@
 
 ---
 
-### TASK-026: Visual Odometry & Feature Matching Across Keyframes
+### TASK-026: Visual Odometry & Feature Matching Across Keyframes [COMPLETED]
 - **Prerequisites:** TASK-025 completed.
 - **Description:** Extract robust keypoint features and compute multi-view correspondences across sequential and overlapping keyframes.
 - **Implementation Steps:**
@@ -350,34 +368,42 @@
 
 ---
 
-### TASK-027: Sensor Fusion Extended Kalman Filter / Pose Graph Optimization
+### TASK-027: Sensor Fusion Extended Kalman Filter / Pose Graph Optimization [COMPLETED]
 - **Prerequisites:** TASK-026 completed.
-- **Description:** Fuse visual odometry relative poses with GPS positions, barometric altitude, and IMU orientation into an optimized, drift-free trajectory.
+- **Description:** Fuse visual odometry relative poses with GPS, RTK/PPK, barometric altitude, and IMU into an optimized, drift-free trajectory. System must gracefully handle each sensor being absent.
 - **Implementation Steps:**
   1. In `workers/pose/sensor_fusion.py`, construct a factor graph using GTSAM / SciPy least squares.
   2. Nodes: Camera 6-DoF poses ($R_i, t_i$).
-  3. Factors:
-     - Visual relative pose constraints between keyframes.
-     - GPS position priors with uncertainty covariance based on HDOP/VDOP.
-     - Barometric altitude prior for vertical stability.
-     - IMU orientation priors (gimbal pitch/roll/yaw).
-  4. Solve non-linear optimization to minimize total reprojection and sensor error.
-- **Definition of Done:** Trajectory error optimization converges; camera path stays strictly bound to GPS coordinates while maintaining smooth local inter-frame relative consistency.
+  3. Factors with explicit fallback hierarchy:
+     - Visual relative pose constraints (always present).
+     - GPS position priors with uncertainty covariance based on HDOP/VDOP (if GPS available).
+     - **[ENHANCED] RTK/PPK position priors** with tighter covariance (sigma_h ~0.02m) when `has_rtk_corrections = True`.
+     - Barometric altitude prior for vertical stability (if `altitude_barometric_m` not null; do NOT use as absolute elevation without calibration).
+     - IMU orientation priors (gimbal pitch/roll/yaw, if available).
+  4. **[ENHANCED] Positioning mode selection:** After optimization, classify and store `positioning_mode`:
+     - `RTK_PPK` if RTK corrections used with high residual quality
+     - `GPS_IMU` if GPS + IMU used without RTK
+     - `GPS_ONLY` if IMU absent
+     - `GPS_DEGRADED` if GPS dropout > 20% of flight
+     - `VISUAL_ONLY` if GPS entirely absent
+  5. Solve non-linear optimization; report per-camera pose uncertainty (position sigma x/y/z) as output.
+- **Definition of Done:** Trajectory optimization converges; positioning_mode correctly classified across test scenarios (full GPS, GPS dropout, RTK, GPS-only); pose uncertainty estimated.
 
 ---
 
-### TASK-028: Camera Extrinsics/Intrinsics Solver & Trajectory Exporter
+### TASK-028: Camera Extrinsics/Intrinsics Solver & Trajectory Exporter [COMPLETED]
 - **Prerequisites:** TASK-027 completed.
-- **Description:** Format and validate camera calibration matrices (intrinsics $K$) and optimized extrinsics ($[R|t]$) for each keyframe, computing pose confidence metrics.
+- **Description:** Format and validate camera calibration matrices and optimized extrinsics for each keyframe, computing pose confidence metrics.
 - **Implementation Steps:**
   1. In `workers/pose/pose_output.py`, calculate reprojection RMSE for each camera pose.
   2. Assign pose confidence score (0-100%) based on inlier count and GPS-visual alignment residual.
-  3. Export `cameras.json` to S3 containing camera matrix $K$, world-to-camera matrix, camera-to-world center, and pose confidence per frame.
-- **Definition of Done:** `cameras.json` is saved in S3; every keyframe has a valid 4x4 transformation matrix and reprojection error < 1.0 pixel.
+  3. Export `cameras.json` to S3 containing camera matrix $K$, world-to-camera matrix, camera-to-world center, pose confidence, and **per-camera position uncertainty sigma (x, y, z)**.
+  4. **[ENHANCED] Accuracy claim correction:** Mean reprojection error is a **[BENCHMARK TARGET]** of < 1.5 px on controlled datasets; scene-dependent factors (repetitive textures, low light, heavy occlusion) will increase this. Never report reprojection error as a guaranteed system property.
+- **Definition of Done:** `cameras.json` saved in S3; every keyframe has a valid 4x4 transformation matrix and per-camera pose uncertainty; mean reprojection error logged as a measured metric (not a guarantee).
 
 ---
 
-### TASK-029: Trajectory Visualization GeoJSON / CZML Generator
+### TASK-029: Trajectory Visualization GeoJSON / CZML Generator [COMPLETED]
 - **Prerequisites:** TASK-028 completed.
 - **Description:** Convert estimated 3D flight trajectory into Cesium-compatible CZML / GeoJSON for interactive rendering in the frontend viewer.
 - **Implementation Steps:**
@@ -390,7 +416,7 @@
 
 ## Phase 5: Monocular AI Depth Estimation & Confidence Prediction
 
-### TASK-030: PyTorch GPU Worker Runtime & CUDA Model Loader
+### TASK-030: PyTorch GPU Worker Runtime & CUDA Model Loader [COMPLETED]
 - **Prerequisites:** TASK-029 completed.
 - **Description:** Initialize the GPU worker runtime environment, verifying CUDA availability, TensorRT/torch.compile optimization, and GPU memory management.
 - **Implementation Steps:**
@@ -401,7 +427,7 @@
 
 ---
 
-### TASK-031: Monocular Metric Depth Map Inference Pipeline
+### TASK-031: Monocular Metric Depth Map Inference Pipeline [COMPLETED]
 - **Prerequisites:** TASK-030 completed.
 - **Description:** Process keyframes through the depth network to produce dense, high-resolution metric depth maps.
 - **Implementation Steps:**
@@ -412,7 +438,7 @@
 
 ---
 
-### TASK-032: Depth Uncertainty and Confidence Field Estimation
+### TASK-032: Depth Uncertainty and Confidence Field Estimation [COMPLETED]
 - **Prerequisites:** TASK-031 completed.
 - **Description:** Estimate pixel-wise depth uncertainty and confidence maps for each keyframe to guide multi-view fusion and flag ungrounded geometry.
 - **Implementation Steps:**
@@ -426,7 +452,7 @@
 
 ---
 
-### TASK-033: Metric Scale Calibration Against Sensor Baseline
+### TASK-033: Metric Scale Calibration Against Sensor Baseline [COMPLETED]
 - **Prerequisites:** TASK-032 completed.
 - **Description:** Align and calibrate estimated depth map scale factors against physical GPS baseline travel distance and barometric altitude ground clearance.
 - **Implementation Steps:**
@@ -437,7 +463,7 @@
 
 ---
 
-### TASK-034: Depth and Confidence Map Serialization to NVMe/S3
+### TASK-034: Depth and Confidence Map Serialization to NVMe/S3 [COMPLETED]
 - **Prerequisites:** TASK-033 completed.
 - **Description:** Compress and serialize metric depth arrays and confidence maps to local NVMe scratch storage and archive them to S3.
 - **Implementation Steps:**
@@ -450,25 +476,29 @@
 
 ## Phase 6: Semantic Scene Understanding & Dynamic Object Removal
 
-### TASK-035: Semantic Segmentation Pipeline Setup
+### TASK-035: Semantic Segmentation Pipeline Setup [ENHANCED]
 - **Prerequisites:** TASK-034 completed.
-- **Description:** Deploy a lightweight, accurate semantic segmentation model (e.g. SegFormer / Mask2Former) classifying scene regions into target geospatial categories.
+- **Description:** Deploy a lightweight, accurate semantic segmentation model (e.g. SegFormer / Mask2Former) classifying scene regions into target geospatial categories. Enhanced to include animal and general dynamic-object fallback classes.
 - **Implementation Steps:**
   1. In `workers/segmentation/semantic_classifier.py`, load segmentation model trained on drone/aerial imagery.
-  2. Target classes: `BUILDING`, `ROAD`, `TERRAIN`, `VEGETATION`, `VEHICLE`, `PERSON`, `UTILITY_INFRASTRUCTURE`, `WATER`, `UNKNOWN`.
+  2. Target classes: `BUILDING`, `ROAD`, `TERRAIN`, `VEGETATION`, `VEHICLE`, `PERSON`, `UTILITY_INFRASTRUCTURE`, `WATER`, `UNKNOWN`, **`ANIMAL`**, **`DYNAMIC_OBJECT`**.
+     - `ANIMAL`: Detects horses, cattle, dogs, birds, and other animals using auxiliary detector; falls back to `DYNAMIC_OBJECT` when species not confidently classified — the system must never pretend to classify what it cannot.
+     - `DYNAMIC_OBJECT`: General fallback for any moving pixel region not matching a specific class; treated as dynamic and excluded from reconstruction.
   3. Run batched inference across all keyframes; generate 8-bit class index masks.
-- **Definition of Done:** Semantic masks correctly categorize buildings, roads, trees, and ground surfaces with mean IoU >= 80% on standard aerial benchmark test images.
+- **Definition of Done:** Semantic masks correctly categorize buildings, roads, trees, vehicles, pedestrians, and animals [BENCHMARK TARGET: >= 80% mean IoU on standard aerial benchmark]; unknown/unclassified moving objects use DYNAMIC_OBJECT fallback.
 
 ---
 
-### TASK-036: Dynamic Object Detection & Multi-Frame Motion Tracking
+### TASK-036: Dynamic Object Detection & Multi-Frame Motion Tracking [ENHANCED]
 - **Prerequisites:** TASK-035 completed.
-- **Description:** Identify moving vehicles, people, and machinery across sequential frames to prevent phantom/ghost geometry in the 3D reconstruction.
+- **Description:** Identify moving vehicles, people, animals, and general dynamic objects across sequential frames to prevent phantom/ghost geometry in the 3D reconstruction.
 - **Implementation Steps:**
-  1. In `workers/segmentation/dynamic_tracker.py`, detect vehicles and pedestrians from the semantic mask and bounding box detector.
+  1. In `workers/segmentation/dynamic_tracker.py`, detect objects from the semantic mask and bounding box detector.
   2. Track objects across sequential frames using ByteTrack / BoT-SORT.
-  3. Compute optical flow and reprojected background motion: if an object’s motion vector diverges from expected camera epipolar geometry, classify it as `DYNAMIC`.
-- **Definition of Done:** A moving car on a roadway is flagged as `DYNAMIC`, while a parked car on a driveway remains classified as static infrastructure.
+  3. Compute optical flow and reprojected background motion; if an object's motion vector diverges from expected camera epipolar geometry, classify it as `DYNAMIC`.
+  4. **[ENHANCED]** Apply dynamic classification to all tracked classes: VEHICLE, PERSON, ANIMAL, and DYNAMIC_OBJECT fallback.
+  5. **[ENHANCED]** A stationary animal (e.g. parked cattle) is only classified DYNAMIC if optical flow confirms motion; do not auto-exclude all animals.
+- **Definition of Done:** A moving car, walking pedestrian, and moving animal are all flagged `DYNAMIC`; stationary objects of the same classes remain as static scene; DYNAMIC_OBJECT fallback catches unclassified moving pixels.
 
 ---
 
@@ -552,18 +582,20 @@
 
 ---
 
-### TASK-044: Occlusion Analysis and Surface Observation State Tagging
+### TASK-044: Occlusion Analysis and Surface Observation State Tagging [ENHANCED]
 - **Prerequisites:** TASK-043 completed.
-- **Description:** Analyze viewing ray visibility to categorize every region of the 3D scene into observation states per PRD Section 19.
+- **Description:** Analyze viewing ray visibility to categorize every region of the 3D scene into the full 6-state observation state per the ObservationState enum from TASK-002.
 - **Implementation Steps:**
   1. In `workers/fusion/occlusion_analyzer.py`, trace camera viewing rays against the reconstructed point cloud and voxel grid.
-  2. Classify points and spatial cells into four states:
+  2. Classify points and spatial cells into the full **6-state** ObservationState:
      - `OBSERVED`: Visual rays directly intersected from 2+ camera angles.
-     - `PARTIALLY_OBSERVED`: Observed from only a single steep angle or near occlusion boundary.
-     - `AI_INFERRED`: Occluded shadow/backside surface filled by learned surface prior.
-     - `UNKNOWN`: Completely unobserved.
-  3. Calculate global percentages: `observed_pct`, `partially_observed_pct`, `inferred_pct`.
-- **Definition of Done:** Point cloud attributes contain `observation_state`; statistics verify sum of percentages equals 100%.
+     - `PARTIAL`: Observed from only a single steep angle or near occlusion boundary.
+     - `INFERRED`: Occluded shadow/backside surface filled by learned surface prior. **MUST be labeled as inferred; must never be presented as measured geometry.**
+     - `UNKNOWN`: Completely unobserved region — no ray intersections from any camera angle.
+     - **`DYNAMIC_EXCLUDED`**: Region removed because it belonged to a dynamic object track; point cloud has no geometry here by design.
+     - **`LOW_CONFIDENCE`**: Observed but with depth confidence below threshold (< 30%), or in shadow region, or on reflective surface — reconstruction exists but should not be trusted for measurement.
+  3. Calculate global percentages: `observed_pct`, `partial_pct`, `inferred_pct`, `unknown_pct`, `dynamic_excluded_pct`, `low_confidence_pct`; sum must equal 100%.
+- **Definition of Done:** Point cloud attributes contain `observation_state` with all 6 possible values; statistics verified to sum to 100%; DYNAMIC_EXCLUDED regions match dynamic mask footprint.
 
 ---
 
@@ -671,15 +703,22 @@
 
 ---
 
-### TASK-053: Geospatial Accuracy Assessment & RMSE Estimator
+### TASK-053: Geospatial Accuracy Assessment, RMSE Estimator & Positioning Mode Report [ENHANCED]
 - **Prerequisites:** TASK-052 completed.
-- **Description:** Statistically evaluate reconstruction accuracy against GPS telemetry / GCPs and generate the quantitative Accuracy Report.
+- **Description:** Statistically evaluate reconstruction accuracy against GPS telemetry/GCPs and generate the quantitative Accuracy Report. Enhanced to distinguish three accuracy types, report positioning mode, and label all numbers as measured/benchmark rather than guaranteed.
 - **Implementation Steps:**
-  1. In `workers/geospatial/accuracy_evaluator.py`, compute residuals between estimated camera centers and recorded GPS/RTK positions:
-     $$\text{RMSE}_{\text{horiz}} = \sqrt{\frac{1}{N} \sum (\Delta x_i^2 + \Delta y_i^2)}, \quad \text{RMSE}_{\text{vert}} = \sqrt{\frac{1}{N} \sum \Delta z_i^2}$$
-  2. Evaluate relative geometric consistency and confidence scores.
-  3. Construct `AccuracyReport` data contract matching PRD Section 39: Overall Quality (0-100), Horizontal RMSE, Vertical RMSE, Coverage %, Dynamic Contamination %, and specific warnings.
-- **Definition of Done:** Generated accuracy report contains non-zero, mathematically calculated RMSE values; never produces fabricated survey-grade claims when GPS confidence is low.
+  1. In `workers/geospatial/accuracy_evaluator.py`, compute residuals:
+     - **Relative reconstruction accuracy:** Internal consistency — reprojection error, track length, loop closure residuals. Does not require external reference.
+     - **Absolute geospatial accuracy:** RMSE between estimated camera centers and GPS/RTK positions. **[BENCHMARK TARGET, NOT GUARANTEE]** Horizontal RMSE < 0.5m on good GPS; vertical RMSE < 0.75m. Actual measured value always reported.
+     - **Measurement accuracy:** Estimated linear measurement error from propagated uncertainty (depth confidence + pose sigma + calibration confidence). **[BENCHMARK TARGET]** < 2% on high-confidence OBSERVED surfaces; UNKNOWN/INFERRED surfaces must display warning before any measurement.
+  2. **[ENHANCED]** Include in AccuracyReport:
+     - `positioning_mode`: one of `RTK_PPK`, `RTK`, `GPS_IMU`, `GPS_ONLY`, `GPS_DEGRADED`, `VISUAL_ONLY`
+     - `ground_control_used`: boolean (GCPs are optional validation aids, never mandatory)
+     - `estimated_horizontal_uncertainty_m`: computed from GPS sigma * scale factor
+     - `estimated_vertical_uncertainty_m`: computed from GPS vertical sigma + baro error
+     - `scale_source`: one of `RTK`, `GPS_BASELINE`, `BAROMETRIC`, `VISUAL_ONLY`
+  3. Construct `AccuracyReport` with all fields from TASK-002 schema; never produce fabricated survey-grade claims.
+- **Definition of Done:** Accuracy report contains measured RMSE values with clear labels as MEASURED metrics (not guarantees); positioning mode and uncertainty estimates always populated.
 
 ---
 
@@ -721,48 +760,57 @@
 
 ## Phase 10: Frontend Design System & Component Library
 
-### TASK-057: Next.js 16 App Directory Setup & Brand Theme Configuration
+### TASK-057: Next.js 16 App Directory Setup & Responsive Brand Theme Configuration [ENHANCED]
 - **Prerequisites:** TASK-056 completed (backend pipeline functional).
-- **Description:** Initialize the web application frontend using Next.js 16 with TypeScript and configure the exact visual design system and color tokens from the Design Document.
+- **Description:** Initialize the web application frontend using Next.js 16 with TypeScript and configure the exact visual design system, color tokens, and responsive mobile viewport foundations from the Design Document.
 - **Implementation Steps:**
   1. In `apps/web/`, initialize Next.js with App Router and Tailwind CSS.
-  2. Configure `tailwind.config.ts` with brand color palette:
-     - `brand-pink`: `#FF69B4` (Bubblegum Pink - primary CTAs, active highlights)
-     - `brand-teal`: `#069494` (Deep Teal - technical panels, secondary actions)
-     - `brand-cyan`: `#00F0FF` (Electric Cyan - active 3D overlays, telemetry)
+  2. Configure viewport meta in `apps/web/app/layout.tsx` with `viewport-fit=cover`, `initial-scale=1`, and `width=device-width`.
+  3. Configure `tailwind.config.ts` with brand color palette:
+     - `brand-pink`: `#FF69B4` (Bubblegum Pink — primary CTAs, active highlights)
+     - `brand-teal`: `#069494` (Deep Teal — technical panels, secondary actions)
+     - `brand-cyan`: `#00F0FF` (Electric Cyan — active 3D overlays, telemetry)
      - `brand-white`: `#FFFFFF` (Main canvas, clean cards)
      - Neutral palette: Ink `#111111`, Muted `#6B6B6B`, Soft Gray `#F4F4F4`, Border `#E5E5E5`.
-  3. Configure Google Font `Inter` in `apps/web/app/layout.tsx` with clean geometric type scale.
-- **Definition of Done:** Running `pnpm --filter web dev` launches the frontend; CSS classes `bg-brand-pink`, `text-brand-teal`, `border-brand-cyan` render exact hex codes.
+  4. Configure responsive breakpoints (`sm: 640px`, `md: 768px`, `lg: 1024px`, `xl: 1280px`, `2xl: 1536px`), dynamic viewport height utilities (`100dvh`), and safe-area padding utilities (`pt-safe`, `pb-safe`).
+  5. Configure Google Font `Inter` in `apps/web/app/layout.tsx` with clean geometric type scale.
+- **Definition of Done:** Running `pnpm --filter web dev` launches the frontend; CSS classes `bg-brand-pink`, `text-brand-teal`, `border-brand-cyan`, and safe-area utility classes render correctly across both 375px mobile and 1440px desktop viewports.
 
 ---
 
-### TASK-058: Base Primitive UI Components Library
+### TASK-058: Base Primitive UI Components Library with Mobile Touch Ergonomics [ENHANCED]
 - **Prerequisites:** TASK-057 completed.
-- **Description:** Implement custom UI primitive components matching the design specifications without bloated third-party styling kits.
+- **Description:** Implement custom UI primitive components matching the design specifications with strict touch ergonomics (minimum 44x44px touch targets) and mobile-responsive drawer primitives.
 - **Implementation Steps:**
   1. In `apps/web/components/ui/`:
-     - `Button.tsx`: Variants `primary` (pink background, black/white text, rounded), `secondary` (white background, teal border, teal text), `ghost`.
-     - `Card.tsx`: White background, subtle `#E5E5E5` border, rounded radius (12px), generous padding.
+     - `Button.tsx`: Variants `primary` (pink background, black/white text, rounded), `secondary` (white background, teal border, teal text), `ghost`. Enforce minimum 44px height for mobile touch targets.
+     - `Card.tsx`: White background, subtle `#E5E5E5` border, rounded radius (12px), generous padding, responsive spacing.
      - `Badge.tsx`: Compact status and tag pill badges.
-     - `Modal.tsx`: Accessible dialog using `@radix-ui/react-dialog`.
-     - `Input.tsx` and `Select.tsx`: Minimal, high-contrast form controls.
-     - `Tooltip.tsx`: Contextual explanation tooltips.
-- **Definition of Done:** Storybook / component preview page displays all button variants, cards, and modal dialogs with correct hover states and focus rings.
+     - `Modal.tsx`: Accessible dialog using `@radix-ui/react-dialog` with responsive full-screen behavior on mobile.
+     - `Drawer.tsx`: Accessible mobile bottom sheet / drawer primitive with swipe-down dismissal and safe-area insets.
+     - `Input.tsx` and `Select.tsx`: Minimal, high-contrast form controls with 44px minimum touch height and accessible labels.
+     - `Tooltip.tsx`: Contextual explanation tooltips with mobile tap-to-reveal fallback.
+- **Definition of Done:** Storybook / component preview page displays all button variants, cards, modal dialogs, and mobile drawers with correct hover, focus, and touch states; all interactive elements pass the >= 44x44px touch target check.
 
 ---
 
-### TASK-059: Application Shell Header and Navigation Bar
+### TASK-059: Responsive Application Shell: Desktop Sidebar & Mobile Bottom Navigation Bar [ENHANCED]
 - **Prerequisites:** TASK-058 completed.
-- **Description:** Implement the lightweight, non-intrusive application shell header matching Design Doc Section 8.
+- **Description:** Implement the unified responsive application shell featuring a desktop sidebar / top navigation for large screens and a fixed bottom navigation bar for mobile screens per Design Doc Sections 7, 8, 27, and 32.
 - **Implementation Steps:**
-  1. In `apps/web/components/shell/Header.tsx`, build top navigation:
-     - Logo: Minimal geometric brand emblem with pink/teal styling.
-     - Nav Links: Dashboard, Projects, Flights, Models, Jobs.
-     - Global Search bar.
-     - Active Jobs badge with pulsating cyan indicator when jobs are running.
-     - User profile dropdown with organization switch and logout.
-- **Definition of Done:** Header renders across desktop viewports (max-width 1440px), responds cleanly to navigation route changes, and highlights the active page.
+  1. In `apps/web/components/shell/Sidebar.tsx` and `apps/web/components/shell/Header.tsx`, build desktop/laptop shell (>= 1024px):
+     - Left sidebar or top navigation with direct access to: Dashboard, Projects, Upload, Processing, 3D Workspace, Exports, Settings.
+     - Minimal geometric brand emblem, global search bar, active jobs pulse badge, and user profile dropdown.
+  2. In `apps/web/components/shell/MobileBottomNav.tsx`, build mobile navigation (< 768px):
+     - Fixed bottom navigation bar with 5 primary destinations: `[ Dashboard ] [ Projects ] [ Upload ] [ 3D View ] [ More ]`.
+     - Fixed to viewport bottom with device safe-area awareness (`padding-bottom: calc(12px + env(safe-area-inset-bottom))`).
+     - Clear active-state indicator (brand pink `#FF69B4` underline or pill background).
+     - Minimum 44 x 44 px touch targets with icon and text label.
+     - "More" opens accessible mobile bottom sheet drawer with links to: Processing, Exports, Settings, Team, API docs, and Logout.
+     - Accessible navigation landmark (`<nav aria-label="Mobile Navigation">`).
+     - Fully functional across portrait and landscape orientations without obscuring workspace content.
+  3. In `apps/web/components/shell/AppLayout.tsx`, compose shell with automatic responsive breakpoint switching and dynamic content padding avoiding bottom bar overlap.
+- **Definition of Done:** Desktop viewport (1440px) renders left sidebar / top navigation; mobile viewport (375px) renders header and fixed bottom navigation bar; tapping bottom nav items switches routes; active page is clearly indicated; safe area padding verified on simulated iPhone/Android viewports.
 
 ---
 
@@ -815,81 +863,86 @@
 
 ## Phase 11: Frontend Core Application Views
 
-### TASK-064: Project Dashboard View (`/dashboard`)
+### TASK-064: Responsive Project Dashboard View (`/dashboard`) [ENHANCED]
 - **Prerequisites:** TASK-063 completed.
-- **Description:** Build the central operational dashboard answering the three primary operator questions per Design Doc Section 9.
+- **Description:** Build the central operational dashboard answering the three primary operator questions per Design Doc Section 9, fully responsive across mobile, tablet, and desktop.
 - **Implementation Steps:**
-  1. In `apps/web/app/dashboard/page.tsx`, create layout:
-     - Top section: Active Projects grid with `+ New Project` button.
-     - Project Cards: Display Project Name, Location, Flight Count, Model Count, Quality Score badge, and 3D thumbnail preview.
-     - Bottom section: "Active Reconstruction Jobs" monitoring card displaying active flights, animated progress bar, percentage, and current stage.
-- **Definition of Done:** Dashboard loads projects from API and renders live progress bars for active jobs updating in realtime.
+  1. In `apps/web/app/dashboard/page.tsx`, create responsive layout:
+     - Top section: Active Projects grid (3 columns on desktop, 2 on tablet, single-column swipeable cards on mobile) with `+ New Project` button.
+     - Project Cards: Display Project Name, Location, Flight Count, Model Count, Quality Score badge, and 3D thumbnail preview with touch-friendly target areas.
+     - Bottom section: "Active Reconstruction Jobs" monitoring card displaying active flights, animated progress bar, percentage, and current stage; reflows into a vertical stack on mobile.
+     - Safe-area bottom padding above mobile navigation bar (`pb-safe`).
+- **Definition of Done:** Dashboard loads projects from API and renders live progress bars for active jobs in realtime; verified to reflow cleanly without horizontal scrollbars on 375px mobile, 768px tablet, and 1440px desktop viewports.
 
 ---
 
-### TASK-065: Project Creation & Project Details Page
+### TASK-065: Responsive Project Creation Modal & Project Details Page [ENHANCED]
 - **Prerequisites:** TASK-064 completed.
-- **Description:** Build the modal to create new projects and the detail page displaying project flights, models, and metadata.
+- **Description:** Build the responsive modal / bottom sheet to create new projects and the detail page displaying project flights, models, and metadata with mobile card reflow.
 - **Implementation Steps:**
-  1. In `apps/web/components/project/CreateProjectModal.tsx`, implement form: Name, Description, Location, Coordinate Reference System (CRS dropdown: WGS84, UTM zones), and Tags.
-  2. In `apps/web/app/projects/[id]/page.tsx`, display project summary, flight list table, and reconstructed models list with links to 3D viewer.
-- **Definition of Done:** User creates a new project via the modal; page automatically navigates to `/projects/[id]` with empty state prompting for flight upload.
+  1. In `apps/web/components/project/CreateProjectModal.tsx`, implement form: Name, Description, Location, Coordinate Reference System (CRS dropdown: WGS84, UTM zones), and Tags; reflows to a swipeable bottom sheet or full-screen overlay on mobile (< 768px).
+  2. In `apps/web/app/projects/[id]/page.tsx`, display project summary cards, flight list (table on desktop, swipeable touch cards on mobile), and reconstructed models list with direct touch links to 3D viewer.
+- **Definition of Done:** User creates a new project via modal or mobile bottom sheet; page navigates to `/projects/[id]`; flight list displays correctly on both desktop tables and mobile card layouts.
 
 ---
 
-### TASK-066: Resumable Direct-to-S3 Video & GPS Upload Screen
+### TASK-066: Mobile-Responsive Resumable Direct-to-S3 Video & GPS Upload Screen [ENHANCED]
 - **Prerequisites:** TASK-065 completed.
-- **Description:** Implement drag-and-drop file upload zone for multi-gigabyte drone videos and companion GPS files per Design Doc Section 11.
+- **Description:** Implement a robust, mobile-responsive drag-and-drop and native file picker upload workflow for multi-gigabyte drone videos and companion GPS files per Design Doc Sections 11 & 32.3.
 - **Implementation Steps:**
-  1. In `apps/web/components/upload/UploadZone.tsx`, build upload UI supporting MP4/MOV drag-and-drop.
-  2. Implement file chunking and direct S3 pre-signed upload using `@uppy/core` or custom multi-part upload worker.
-  3. Display upload progress bar, upload speed (MB/s), and estimated remaining upload time.
-  4. Provide companion upload slot for GPS files (CSV, JSON, SRT).
-  5. Upon upload completion, automatically call `POST /projects/{id}/flights`.
-- **Definition of Done:** Dropping a 1GB test video file uploads directly to S3 storage bucket with active progress bar and registers flight in backend.
+  1. In `apps/web/components/upload/UploadZone.tsx`, build upload UI supporting desktop drag-and-drop and mobile native file picker (`input type="file" accept="video/mp4,video/quicktime"`).
+  2. Implement file chunking and direct S3 pre-signed upload using `@uppy/core` or custom multi-part upload worker; offload checksum and chunk slicing to a Web Worker so the mobile UI thread never freezes.
+  3. Display upload progress HUD: upload speed (MB/s), percentage completed, and estimated remaining upload time.
+  4. Implement pause and resume capability for intermittent mobile network connections.
+  5. Provide companion upload slot for GPS files (CSV, JSON, SRT) with automatic timestamp alignment validation.
+  6. Display clear, actionable upload error banners with single-tap retry.
+  7. Upon upload completion, automatically register flight via `POST /projects/{id}/flights` and transition seamlessly to the pre-flight quality report.
+- **Definition of Done:** Uploading a test video on mobile and desktop uploads directly to S3 with active progress HUD, does not freeze the UI, supports pause/resume, and navigates to the quality report upon completion.
 
 ---
 
-### TASK-067: Pre-Flight Input Quality Assessment Screen
+### TASK-067: Responsive Pre-Flight Input Quality Assessment Screen [ENHANCED]
 - **Prerequisites:** TASK-066 completed.
-- **Description:** Display immediate pre-flight data validation and quality metrics before initiating expensive GPU reconstruction per Design Doc Section 12.
+- **Description:** Display immediate pre-flight data validation and quality metrics before initiating GPU reconstruction per Design Doc Sections 12 & 32.2, optimized for mobile screens.
 - **Implementation Steps:**
   1. In `apps/web/components/flight/InputQualityScreen.tsx`, render:
-     - Video Quality score & status badge (e.g. `91%` - Good).
-     - GPS Quality score & status badge (e.g. `74%` - Moderate).
-     - Motion Blur score (e.g. `88%` - Low).
-     - Scene Texture score (e.g. `94%` - Good).
+     - Video Quality score & status badge (e.g. `91%` — Good).
+     - GPS Quality score & status badge (e.g. `74%` — Moderate).
+     - Motion Blur score (e.g. `88%` — Low).
+     - Scene Texture score (e.g. `94%` — Good).
      - Overall Expected Result badge (`HIGH` / `MODERATE` / `LOW`).
-     - Actionable warnings list (e.g., `"GPS uncertainty increased near end of flight"`).
-  2. Action button: `[ Proceed to Reconstruction ]` (pink) or `[ Re-upload Data ]`.
-- **Definition of Done:** Screen renders the exact layout from Design Doc Section 12; disables reconstruction if critical input failure is detected.
+     - Actionable warnings list with clear high-contrast typography.
+  2. Responsive reflow: Metrics stack in a 2x2 grid on desktop/tablet and single-column cards on mobile.
+  3. Sticky bottom action bar with safe-area spacing: `[ Proceed to Reconstruction ]` (brand pink) or `[ Re-upload Data ]`.
+- **Definition of Done:** Screen renders quality metrics across desktop and mobile; sticky bottom CTA is accessible above mobile bottom nav; disables reconstruction if critical input failure is detected.
 
 ---
 
-### TASK-068: Reconstruction Launch Configuration Modal
+### TASK-068: Responsive Reconstruction Launch Configuration Modal [ENHANCED]
 - **Prerequisites:** TASK-067 completed.
-- **Description:** Implement job parameter modal allowing operators to select processing quality and coordinate reference system.
+- **Description:** Implement job parameter modal allowing operators to select processing quality presets and CRS, reflowing into an accessible bottom sheet on mobile screens.
 - **Implementation Steps:**
   1. In `apps/web/components/reconstruction/LaunchJobModal.tsx`, build options:
-     - Quality Preset: `Low` (Fastest, preview), `Balanced` (Standard, recommended), `High` (Full resolution, max detail).
+     - Quality Preset: `Low` (Fastest, preview), `Balanced` (Standard, recommended), `High` (Full resolution, max detail) with touch-friendly segmented pills.
      - Feature toggles: Dynamic Object Removal, Semantic Segmentation.
      - Target CRS projection confirmation.
-  2. Primary action button: `[ Start Reconstruction ]` with brand pink accent.
-  3. Submits `POST /flights/{id}/reconstruction-jobs`.
-- **Definition of Done:** Submitting form launches backend job and redirects browser to Reconstruction Progress view.
+  2. Mobile adaptation: On screens < 768px, render as a swipeable bottom sheet drawer with full-width buttons and safe-area bottom padding.
+  3. Primary action button: `[ Start Reconstruction ]` with brand pink accent.
+  4. Submits `POST /flights/{id}/reconstruction-jobs`.
+- **Definition of Done:** Submitting form launches backend job and redirects browser to Reconstruction Progress view; verified functional in both desktop modal and mobile bottom sheet modes.
 
 ---
 
-### TASK-069: Reconstruction Real-Time Progress View
+### TASK-069: Responsive Reconstruction Real-Time Progress View [ENHANCED]
 - **Prerequisites:** TASK-068 completed.
-- **Description:** Build the live processing view tracking reconstruction stages, progress percentage, frame count, and ETA per Design Doc Section 13.
+- **Description:** Build the live processing view tracking reconstruction stages, progress percentage, frame count, and ETA per Design Doc Sections 13 & 32.2.
 - **Implementation Steps:**
-  1. In `apps/web/app/jobs/[id]/page.tsx`, implement:
+  1. In `apps/web/app/jobs/[id]/page.tsx`, implement responsive layout:
      - Headline: `"Building your 3D scene"`.
      - Large percentage display: e.g. `78%`.
      - Horizontal progress bar with brand pink/teal fill.
      - Frame counter: `"8,421 / 11,672"`.
-     - Stage checklist with visual status dots:
+     - Stage checklist with visual status dots (reflows to vertical mobile stepper):
        - `✓ Input validation`
        - `✓ Frame extraction`
        - `✓ Pose estimation`
@@ -898,114 +951,133 @@
        - `○ Mesh generation`
        - `○ Texturing`
        - `○ Quality assessment`
-  2. Automatically transition to the 3D Viewer when status becomes `COMPLETED`.
-- **Definition of Done:** Progress view subscribes to WebSocket, animates stage transitions in realtime, and navigates to the 3D viewer upon completion.
+  2. Implement resilient WebSocket connection with automatic background reconnect and mobile screen awake / wake-lock hint.
+  3. Automatically transition to the 3D Viewer when status becomes `COMPLETED`.
+- **Definition of Done:** Progress view subscribes to WebSocket, animates stage transitions in realtime across mobile and desktop viewports, and navigates to the 3D viewer upon completion.
 
 ---
 
 ## Phase 12: Frontend CesiumJS 3D Viewer & Interactive Tools
 
-### TASK-070: CesiumJS Container Integration with Next.js
+### TASK-070: CesiumJS Container Integration with Next.js & Mobile Touch Navigation [ENHANCED]
 - **Prerequisites:** TASK-069 completed.
-- **Description:** Mount the CesiumJS 3D geospatial globe cleanly inside the Next.js client component lifecycle without SSR/window conflicts.
+- **Description:** Mount the CesiumJS 3D geospatial globe cleanly inside the Next.js client component lifecycle without SSR/window conflicts, adding multi-touch gesture navigation (rotate, pinch-zoom, pan), mobile fullscreen toggle, and device pixel ratio capping for mobile thermal efficiency.
 - **Implementation Steps:**
   1. In `apps/web/components/viewer/CesiumViewer.tsx`, dynamically import Cesium with `ssr: false`.
   2. Initialize `Cesium.Viewer` with custom minimalist options (disable default Bing imagery, timeline, animation, and info box widgets).
   3. Configure high-precision WGS84 globe terrain with neutral/clean ambient lighting.
-  4. Implement smooth camera orbit, pan, zoom, and fly-to controls.
-- **Definition of Done:** CesiumJS globe mounts inside React view without browser console errors; frame rate maintains >= 60 FPS in empty scene.
+  4. Implement smooth camera orbit, pan, zoom, and fly-to controls for mouse/pointer.
+  5. Implement touch gesture handler:
+     - Single-finger drag: camera rotate and tilt.
+     - Two-finger pinch: smooth zoom in/out.
+     - Two-finger drag: pan across terrain.
+  6. Implement one-tap Fullscreen toggle button hiding mobile browser chrome and UI overlays.
+  7. Cap `viewer.resolutionScale` to max 1.5 on high-DPI mobile devices to prevent GPU thermal throttling and conserve battery.
+- **Definition of Done:** CesiumJS globe mounts inside React view without browser console errors; touch gestures (rotate, pinch zoom, pan) and fullscreen toggle work reliably on mobile touch devices; frame rate maintains >= 60 FPS in empty scene.
 
 ---
 
-### TASK-071: 3D Tiles Streaming and Camera Trajectory Overlay
+### TASK-071: 3D Tiles Streaming, Mobile LOD Optimization & Camera Trajectory [ENHANCED]
 - **Prerequisites:** TASK-070 completed.
-- **Description:** Stream the reconstructed 3D Tileset and render the estimated flight trajectory camera path in Electric Cyan.
+- **Description:** Stream reconstructed 3D Tileset and camera path in Electric Cyan, with dynamic Level-of-Detail (LOD) tuning for mobile network bandwidth and GPU memory limits.
 - **Implementation Steps:**
   1. In `apps/web/components/viewer/TileLoader.ts`, load `Cesium3DTileset.fromUrl(tilesetUrl)`.
-  2. Position and orient the tileset at its exact geographic coordinate center.
-  3. In `apps/web/components/viewer/TrajectoryLayer.ts`, load the CZML/GeoJSON flight path and render the camera flight path using a glowing Electric Cyan `#00F0FF` polyline with directional camera frustums at keyframe locations.
-- **Definition of Done:** Reconstructed 3D building/terrain tiles stream dynamically as the camera navigates; cyan camera trajectory renders accurately above the model.
+  2. Adjust `maximumScreenSpaceError` dynamically based on device tier (e.g. 16 for desktop, 24 for mobile) to optimize streaming speed and frame rate on cellular networks.
+  3. Position and orient the tileset at its exact geographic coordinate center.
+  4. In `apps/web/components/viewer/TrajectoryLayer.ts`, load CZML/GeoJSON flight path and render camera trajectory in Electric Cyan `#00F0FF` with directional camera frustums at keyframe locations.
+  5. Support single-tap selection of keyframe camera frustums to fly camera to capture viewpoint on both desktop and mobile.
+- **Definition of Done:** Reconstructed 3D tiles stream dynamically; cyan camera trajectory renders accurately; keyframe frustums respond to touch and mouse selection; mobile memory usage remains within browser budget.
 
 ---
 
-### TASK-072: Multi-Layer Visibility and Opacity Control Panel
+### TASK-072: Multi-Layer Visibility, Opacity Control & Mobile Observation-State Drawer [ENHANCED]
 - **Prerequisites:** TASK-071 completed.
-- **Description:** Build the viewer sidebar allowing users to toggle layers and adjust opacity per Design Doc Section 16.
+- **Description:** Build the multi-layer and observation-state control panel, operating as a persistent desktop sidebar and reflowing to a swipeable mobile bottom sheet drawer.
 - **Implementation Steps:**
   1. In `apps/web/components/viewer/LayerControl.tsx`, implement layer toggles:
-     - `☑ Terrain`
-     - `☑ Buildings`
-     - `☑ Roads`
-     - `☑ Vegetation`
-     - `☑ Point Cloud`
-     - `☑ Mesh`
-     - `☑ Camera Path`
-     - `☑ Confidence Heatmap`
-     - `☑ AI Inferred Areas`
-  2. Implement opacity sliders (0-100%) for each layer.
-  3. Connect toggles to Cesium feature styling and entity visibility.
-- **Definition of Done:** Toggling off "Vegetation" hides tree geometry; toggling "Point Cloud" switches rendering between solid mesh and point cloud points.
+     - `Terrain` / `Buildings` / `Roads` / `Vegetation` / `Point Cloud` / `Mesh` / `Camera Path` / `Confidence Heatmap`.
+     - Observation State Filter section (all 6 states):
+       - `Observed (solid)` — show/hide directly observed geometry
+       - `Partially Observed` — show single-angle or near-occlusion geometry
+       - `Inferred (AI)` — show AI-completed surfaces (always labeled, never claimed as measured)
+       - `Unknown` — highlight completely unobserved regions
+       - `Dynamic Excluded` — visualize regions where dynamic objects were removed
+       - `Low Confidence` — highlight shadow/reflective/low-depth-confidence regions.
+  2. Implement opacity sliders (0-100%) for each layer with touch-friendly slider handles.
+  3. Mobile reflow: On screens < 768px, wrap layer controls into a swipeable mobile bottom sheet drawer (`LayerDrawer.tsx`) accessible via a floating action button or bottom nav, respecting safe-area insets.
+  4. Connect toggles to Cesium feature styling using per-point/per-face `observation_state` attribute from TASK-094.
+- **Definition of Done:** All 6 observation state filters work independently; desktop sidebar renders cleanly; mobile bottom sheet drawer opens smoothly via touch, toggles layers in realtime, and respects safe-area insets.
 
 ---
 
-### TASK-073: Interactive Distance & Height Measurement Tool
+### TASK-073: Interactive Distance & Height Measurement Tool with Mobile Touch Support [ENHANCED]
 - **Prerequisites:** TASK-072 completed.
-- **Description:** Implement click-to-measure distance and vertical height tools with uncertainty indicators per Design Doc Section 17.
+- **Description:** Implement click and touch-to-measure distance and vertical height tools with uncertainty indicators and mobile precision drag loupe per Design Doc Sections 17 & 32.4.
 - **Implementation Steps:**
-  1. In `apps/web/components/measurement/MeasurementManager.ts`, attach Cesium `ScreenSpaceEventHandler` for mouse clicks.
-  2. Distance Mode: User clicks Point A and Point B; render cyan measurement guide line and floating HUD:
-     - Distance: `12.48 m`
-     - Estimated error: `±0.18 m`
-  3. Height Mode: User clicks ground point and roof point; snap vertical height line and display:
-     - Structure Height: `18.2 m`
-     - Estimated error: `±0.31 m`
-  4. Coordinates HUD: Display live Latitude, Longitude, and Altitude at mouse cursor.
-- **Definition of Done:** Clicking two building points displays measured distance and uncertainty; matches known ground truth within ±2%.
+  1. In `apps/web/components/measurement/MeasurementManager.ts`, attach Cesium `ScreenSpaceEventHandler` for mouse and touch inputs.
+  2. Desktop & Mobile Distance Mode: User taps/clicks Point A and Point B; on touch devices, provide drag handles and touch-friendly magnifier loupe for sub-meter pin positioning; render cyan measurement guide line.
+  3. Height Mode: User clicks/taps ground and roof point; snap vertical line with structure height display.
+  4. Floating Measurement HUD:
+     - Distance: `12.48 m` (estimated error: `±0.18 m`)
+     - Height: `18.2 m` (estimated error: `±0.31 m`)
+     - Observation State at point: Displays whether endpoints are `OBSERVED`, `PARTIAL`, or `INFERRED`.
+  5. Mobile layout: Position measurement HUD at top of viewport so it does not interfere with bottom navigation or touch gesture areas.
+  6. Coordinates HUD: Display live Latitude, Longitude, and Altitude at cursor or touch pin.
+- **Definition of Done:** Tapping or clicking two building points displays measured distance and uncertainty margin; touch drag loupe enables precise mobile pin placement; HUD does not overlap mobile bottom nav.
 
 ---
 
-### TASK-074: Polygon Area and Surface Volume Measurement Tool
+### TASK-074: Polygon Area, Surface Volume Measurement & Mobile Touch Vertices [ENHANCED]
 - **Prerequisites:** TASK-073 completed.
-- **Description:** Implement multi-point polygon selection for area and volumetric calculation (stockpiles, excavation pits).
+- **Description:** Implement multi-point polygon selection for area and volumetric calculation (stockpiles, excavation pits) with mobile touch vertex handles.
 - **Implementation Steps:**
-  1. In `apps/web/components/measurement/PolygonMeasure.ts`, allow users to click multiple vertices to draw a closed polygon.
-  2. Compute 2D surface area in square meters ($m^2$) on the georeferenced plane.
-  3. In Volume Mode: compute cut/fill volume between triangulated polygon surface and base reference plane.
-  4. Render measurement summary in floating teal card.
-- **Definition of Done:** Drawing a polygon over a flat surface calculates correct area in square meters; volume tool estimates stockpile volume.
+  1. In `apps/web/components/measurement/PolygonMeasure.ts`, allow users to click or tap multiple vertices to draw a closed polygon.
+  2. On mobile, render touch-friendly draggable vertex pins (minimum 44x44px touch footprint) and an `[ Undo Last Point ]` floating button.
+  3. Compute 2D surface area in square meters ($m^2$) on the georeferenced plane.
+  4. In Volume Mode: compute cut/fill volume between triangulated polygon surface and base reference plane.
+  5. Render measurement summary in floating teal card; on mobile, collapses into a compact top card.
+- **Definition of Done:** Drawing a polygon on desktop and mobile calculates correct area and stockpile volume; touch vertex placement and undo work cleanly on mobile viewports.
 
 ---
 
-### TASK-075: Semantic Object Inspection & Confidence Heatmap Mode
+### TASK-075: Semantic Object Inspection & Mobile Bottom Sheet Details [ENHANCED]
 - **Prerequisites:** TASK-074 completed.
-- **Description:** Implement click-to-inspect semantic metadata and the dedicated confidence visualization mode per Design Doc Sections 19 & 20.
+- **Description:** Implement click/tap-to-inspect semantic metadata and confidence visualization mode, reflowing to a swipeable bottom sheet on mobile screens per Design Doc Sections 19, 20 & 32.4.
 - **Implementation Steps:**
-  1. In `apps/web/components/viewer/ObjectInspector.tsx`, on clicking an object (e.g. building), display contextual panel:
+  1. In `apps/web/components/viewer/ObjectInspector.tsx`, on clicking/tapping an object (e.g. building), display contextual panel:
      - Object Type: Commercial Building
      - Height: 18.2 m | Footprint: 1,420 $m^2$
      - Geometry Confidence: 94% | Texture Confidence: 87%
      - Observation State: Mostly Observed (84% observed, 10% partially observed, 6% AI inferred)
-  2. In `apps/web/components/viewer/ConfidenceShader.ts`, apply custom shader recoloring geometry:
+  2. Mobile reflow: On mobile (< 768px), display object details inside a swipeable bottom sheet drawer with safe-area spacing instead of desktop floating sidebar.
+  3. In `apps/web/components/viewer/ConfidenceShader.ts`, apply custom shader recoloring geometry:
      - High Confidence: Cyan / Teal (`#00F0FF` / `#069494`)
      - Medium Confidence: Neutral Gray (`#F4F4F4`)
      - Low Confidence: Bubblegum Pink (`#FF69B4`)
-- **Definition of Done:** Clicking a building displays semantic attributes and confidence breakdown; toggling confidence mode paints the model with the cyan-to-pink gradient.
+- **Definition of Done:** Tapping an object on mobile opens bottom sheet drawer with semantic attributes and confidence breakdown; confidence mode paints model with cyan-to-pink gradient across all viewports.
 
 ---
 
-### TASK-076: Model Quality Panel and Full Accuracy Report View
+### TASK-076: Model Quality Panel, Accuracy Report & Mobile Full-Screen Sheet [ENHANCED]
 - **Prerequisites:** TASK-075 completed.
-- **Description:** Build the comprehensive Accuracy Report and Model Quality Panel per Design Doc Section 18 and PRD Section 39.
+- **Description:** Build comprehensive Accuracy Report and Model Quality Panel, enhanced to show all component confidence scores, positioning mode, and sensor config, with full responsive reflow for mobile operators.
 - **Implementation Steps:**
   1. In `apps/web/components/viewer/ModelQualityPanel.tsx`, display:
      - Overall Quality Score: `87 / 100`
+     - Component Confidence Breakdown: Geometry `94%`, Depth `88%`, Pose `91%`, Geolocation `87%`, Texture `82%`
      - Coverage: `93%`
-     - Horizontal RMSE: `0.32 m`
-     - Vertical RMSE: `0.58 m`
-     - Observation breakdown: Observed (84%), Partially Observed (10%), AI Inferred (6%)
-     - Warnings list: (e.g. `"North-facing facade has limited observations"`, `"Roof texture confidence reduced by shadows"`)
-  2. Include `[ Download Full Accuracy PDF/JSON ]` button.
-- **Definition of Done:** Panel accurately reflects the backend `AccuracyReport` data contract; renders with clean typography and high-contrast metrics.
+     - Horizontal RMSE: `0.32 m` *(measured — not a guaranteed value)*
+     - Vertical RMSE: `0.58 m` *(measured — not a guaranteed value)*
+     - Observation breakdown: Observed (84%), Partially Observed (10%), Inferred (4%), Unknown (1%), Dynamic Excluded (1%)
+     - Positioning Mode: e.g. `GPS + IMU` or `RTK + IMU` with color badge
+     - Scale Source: e.g. `GPS Baseline` or `RTK`
+     - Ground Control Used: `No`
+     - Estimated Uncertainties: Horizontal `±0.35 m`, Vertical `±0.62 m`
+     - Sensor Configuration: Camera model, calibration source, calibration confidence
+     - Actionable warnings list with high-contrast text.
+  2. Mobile adaptation: Reflow into a scrollable full-screen mobile sheet or collapsible drawer with sticky download buttons and safe-area padding.
+  3. Include `[ Download Full Accuracy PDF/JSON ]` button producing machine-readable JSON matching the `AccuracyReport` schema.
+- **Definition of Done:** Panel accurately reflects backend AccuracyReport; all numbers labeled as MEASURED; component confidence bars rendered; mobile view scrolls smoothly and buttons are easily tapped.
 
 ---
 
@@ -1026,9 +1098,9 @@
 
 ---
 
-### TASK-078: Frontend Export Dialog & Download Manager
+### TASK-078: Responsive Frontend Export Dialog & Download Manager [ENHANCED]
 - **Prerequisites:** TASK-077 completed.
-- **Description:** Implement the clean export dialog modal per Design Doc Section 21.
+- **Description:** Implement the responsive export dialog modal reflowing into a bottom sheet on mobile devices per Design Doc Sections 21 & 32.2.
 - **Implementation Steps:**
   1. In `apps/web/components/export/ExportModal.tsx`, build selection modal:
      - 3D Model: Radio buttons for GLB, OBJ, glTF.
@@ -1036,9 +1108,10 @@
      - Terrain: GeoTIFF DEM/DSM.
      - Streaming: 3D Tiles package.
      - Coordinate system selector (Original UTM or WGS84).
-  2. Submits `POST /projects/{id}/exports`.
-  3. Displays active export conversion progress with download button when ready.
-- **Definition of Done:** Selecting "GLB" and clicking "Export" triggers the backend export job, displays progress, and provides the download link.
+  2. Mobile reflow: Render as an accessible swipeable bottom sheet drawer on screens < 768px with full-width radio options and sticky export CTA button.
+  3. Submits `POST /projects/{id}/exports`.
+  4. Displays active export conversion progress bar and download manager with direct mobile browser download trigger when ready.
+- **Definition of Done:** Selecting "GLB" and clicking "Export" on both desktop and mobile triggers export job, displays progress bar, and successfully initiates browser file download upon completion.
 
 ---
 
@@ -1147,34 +1220,241 @@
 - **Description:** Run end-to-end evaluation against controlled aerial benchmark datasets to mathematically verify PRD Section 27 & 45 targets.
 - **Implementation Steps:**
   1. In `scripts/benchmark_suite.py`, execute end-to-end pipeline across standard aerial datasets with known ground truth (Urban, Rural, Industrial, Mixed Terrain).
-  2. Validate quantitative acceptance criteria:
-     - Horizontal RMSE $\le 0.5\text{ m}$ target on suitable inputs.
-     - Vertical RMSE $\le 0.75\text{ m}$ target on suitable inputs.
-     - Observable surface coverage $\ge 90\%$.
-     - Dynamic object contamination $< 5\%$.
-     - 5-minute 4K flight reconstruction time $\le 15\text{ minutes}$ on GPU workers.
-     - Measurement error $\le 2\%$.
-     - Interactive viewer performance $\ge 30\text{ FPS}$.
-  3. Generate final benchmark verification report document.
-- **Definition of Done:** Benchmark run outputs passing verification logs across all test categories, proving the complete system meets all PRD and Design Doc requirements.
+  2. Validate quantitative acceptance criteria (all values are **[BENCHMARK TARGETS]**, not guarantees; actual measured results always reported):
+     - **[BENCHMARK TARGET]** Horizontal RMSE < 0.5 m on standard GPS; RTK achieves better; GPS-degraded will exceed this.
+     - **[BENCHMARK TARGET]** Vertical RMSE < 0.75 m; highly dependent on GPS/baro quality and flight altitude.
+     - **[BENCHMARK TARGET]** Observable surface coverage >= 60% single nadir pass; planned orbital passes achieve higher.
+     - **[BENCHMARK TARGET]** Dynamic object contamination < 5% on moderate-traffic scenes.
+     - **[BENCHMARK TARGET]** 5-minute 4K reconstruction <= 15 minutes on g5.xlarge; longer for dense/large scenes.
+     - **[BENCHMARK TARGET]** Measurement error <= 2% on high-confidence OBSERVED surfaces.
+     - **[BENCHMARK TARGET]** Interactive viewer >= 30 FPS on modern GPU.
+  3. Generate final `benchmark_result.json` (machine-readable, matches AccuracyReport schema).
+- **Definition of Done:** Benchmark produces measured results with correct [BENCHMARK TARGET] label
 
 ---
 
-## Task Verification & Progression Matrix
+## New Tasks Added (TASK-088 → TASK-097)
+
+### TASK-088: Photometric Normalization & Illumination Compensation Module
+- **Prerequisites:** TASK-021 completed.
+- **Phase:** 3 (Ingestion & Quality), inserted after TASK-021.
+- **Description:** Implement a photometric normalization pre-processing step that compensates for frame-to-frame exposure changes, auto-exposure transitions, and strong illumination gradients before feature extraction. The goal is to prevent the pipeline from treating illumination differences as geometry differences.
+- **Implementation Steps:**
+  1. In `workers/preprocessing/photometric_normalizer.py`, implement `PhotometricNormalizer`.
+  2. For each keyframe, compute a histogram equalization in LAB color space to normalize luminance without distorting hue.
+  3. Apply adaptive histogram equalization (CLAHE) with a clip limit calibrated to scene brightness variance.
+  4. Detect auto-exposure transitions between consecutive keyframes (luminance delta > 20% between adjacent frames); flag affected frames with `ILLUMINATION_TRANSITION` warning.
+  5. Optionally apply radiometric gain correction using a reference frame from the sequence (first stable frame after takeoff).
+  6. Output normalized keyframe images to `/tmp/scratch/{job_id}/frames_normalized/` alongside original frames (originals preserved for texturing).
+  7. Normalized images are used for feature extraction and depth estimation; original photometric frames are used for texture baking.
+- **Important:** Normalization does not eliminate illumination problems; it reduces their impact. Shadow regions and extreme overexposure remain unreliable. Do not overclaim that normalization guarantees uniform photometry.
+- **Definition of Done:** Unit test shows feature match count increases by >= 15% on an illumination-varying keyframe pair after normalization; ILLUMINATION_TRANSITION warnings correctly emitted on sudden exposure-change frames.
+
+### TASK-089: Shadow Detection & Shadow-Aware Processing Pipeline
+- **Prerequisites:** TASK-088 completed.
+- **Phase:** 3 (Ingestion & Quality), inserted after TASK-088.
+- **Description:** Implement a shadow detection module producing per-frame shadow masks. Shadow masks propagate through the pipeline to: (1) down-weight shadow pixels in feature matching, (2) assign LOW_CONFIDENCE observation state to shadow-dominated surfaces in TASK-044, (3) guide shadow-aware texture selection in TASK-049.
+- **Implementation Steps:**
+  1. In `workers/preprocessing/shadow_detector.py`, implement `ShadowDetector`.
+  2. Shadow detection approach: Convert to LAB; shadow pixels are those with low L channel (< 0.35 * scene median L) AND low saturation variation (to distinguish from dark surfaces).
+  3. Produce binary shadow mask `shadow_%05d.png` (255 = shadow, 0 = lit) for each keyframe.
+  4. Compute `shadow_coverage_pct` per frame; aggregate to scene-level `shadow_score` [0..100].
+  5. Write shadow masks to `/tmp/scratch/{job_id}/shadows/`.
+  6. **Important limitation:** The system can distinguish probable shadows from clearly dark surfaces in good-lighting conditions. In low-light or overcast scenes, shadow boundaries are ambiguous. Always flag uncertainty; do not claim confident shadow classification in all conditions.
+  7. Downstream integration:
+     - Feature matching (TASK-026): de-weight shadow pixels in descriptor computation.
+     - Observation state (TASK-044): shadow-dominated points tagged `LOW_CONFIDENCE`.
+     - Texture selection (TASK-049): prefer non-shadow keyframe for each face.
+- **Definition of Done:** Shadow masks produced for all keyframes; shadow_score correctly rates shadow-heavy test sequence as < 50; feature matching improvement tested on shadow-vs-non-shadow frame pairs.
+
+### TASK-090: Camera Intrinsics First-Class Calibration Handler
+- **Prerequisites:** TASK-025 (keyframe extraction) completed.
+- **Phase:** 4 (Poses & Trajectory), inserted after TASK-025.
+- **Description:** Implement a first-class camera calibration module that resolves camera intrinsics through a priority hierarchy: user-provided > known camera profile database > in-flight self-calibration estimate. Calibration source and confidence propagate into reconstruction accuracy.
+- **Implementation Steps:**
+  1. In `workers/pose/intrinsics_resolver.py`, implement `IntrinsicsResolver`.
+  2. **Priority 1 — User-provided:** Accept `CameraCalibration` JSON uploaded alongside video (fields: fx, fy, cx, cy, k1, k2, p1, p2, width, height, sensor_width_mm, sensor_height_mm, camera_model). Source = `USER_PROVIDED`, confidence = 95.
+  3. **Priority 2 — Known profile database:** In `workers/pose/camera_profiles.json`, maintain a database of common drone cameras (DJI Mavic 3, DJI Air 2S, DJI Mini 3 Pro, Autel EVO II, etc.) keyed by EXIF model string. Source = `KNOWN_PROFILE`, confidence = 80.
+  4. **Priority 3 — Self-calibration estimate:** If no profile matches, estimate fx = fy ≈ image_width * 0.85 (reasonable drone telephoto prior); cx = image_width/2; cy = image_height/2; k1=k2=p1=p2=0. Source = `ESTIMATED`, confidence = 40. Apply bundle adjustment to refine in TASK-027.
+  5. Write resolved calibration to `calibration.json` in S3 interim storage.
+  6. Propagate `calibration_confidence` into `geolocation_confidence` and measurement error estimates.
+  7. Generate user-visible warning if source is ESTIMATED: `"Camera intrinsics were estimated — measurement accuracy may be reduced"`.
+- **Definition of Done:** All 3 paths tested; ESTIMATED path produces plausible fx for known test resolutions; KNOWN_PROFILE correctly matches DJI Mavic 3; USER_PROVIDED overrides all other sources.
+
+### TASK-091: RTK/PPK High-Accuracy Positioning Integration
+- **Prerequisites:** TASK-027 (Sensor Fusion) completed.
+- **Phase:** 4 (Poses & Trajectory), inserted after TASK-027.
+- **Description:** Implement optional RTK/PPK correction processing to achieve higher-accuracy trajectory and georeferencing when RTK/PPK data is available. System must function with standard GPS when RTK is absent.
+- **Implementation Steps:**
+  1. In `workers/pose/rtk_processor.py`, implement `RTKProcessor`.
+  2. **Input detection:** Check `flight.has_rtk_corrections`; if True, locate RTK data file (DJI RTK CSV, RINEX `.obs`/`.nav`, separate correction stream).
+  3. **RTK processing:** Apply differential corrections to GPS positions; produce corrected camera positions with horizontal sigma ~ 0.02–0.05 m (vs standard GPS sigma ~ 0.5–3 m).
+  4. **PPK processing:** If PPK RINEX file provided, process offline with RTKLib / rtkpost; produce post-processed corrected trajectory.
+  5. Feed corrected positions into TASK-027 sensor fusion as RTK/PPK position priors with tighter covariance.
+  6. **Graceful fallback:** If RTK/PPK data is corrupt or unavailable, log warning and fall back to standard GPS silently; set `positioning_mode = GPS_IMU`.
+  7. Update AccuracyReport with `positioning_mode = RTK_PPK` and tighter estimated uncertainties.
+- **Definition of Done:** With RTK test data, estimated horizontal uncertainty reported < 0.1 m vs > 0.5 m without RTK; `positioning_mode` correctly set to `RTK_PPK`; system works identically with RTK absent.
+
+### TASK-092: Sensor Uncertainty Propagation & Component-Level Confidence Model
+- **Prerequisites:** TASK-032 (Depth Confidence) completed.
+- **Phase:** 5 (Monocular Depth), inserted after TASK-032.
+- **Description:** Implement an explicit uncertainty propagation chain connecting sensor-level noise through the reconstruction pipeline to final 3D point uncertainty and measurement error estimates. This enables per-point uncertainty rather than a single generic confidence score.
+- **Implementation Steps:**
+  1. In `workers/depth/uncertainty_propagator.py`, implement `UncertaintyPropagator`.
+  2. **GPS uncertainty → pose uncertainty:** Per-camera pose position sigma (x, y, z) = f(GPS_sigma, HDOP, VDOP, trajectory_smoothness). Store in `cameras.json`.
+  3. **Calibration uncertainty → projection uncertainty:** If `calibration_source == ESTIMATED`, add calibration error contribution to projection uncertainty (sigma_px += f(1 - calibration_confidence/100) * 2.0 px).
+  4. **Depth uncertainty → 3D point uncertainty:** 3D point sigma = f(depth_sigma, pose_sigma, fx, depth_value): `sigma_3d = sqrt((depth_sigma/depth)^2 + (pose_sigma_t/depth)^2) * depth`.
+  5. **3D point uncertainty → measurement error:** For a measurement between two points A and B: `sigma_measurement = sqrt(sigma_A^2 + sigma_B^2)`.
+  6. Store per-point `depth_uncertainty_m` and `position_uncertainty_m` as additional LAS dimensions and GLB/glTF extensions.
+  7. Surface uncertainty in viewer: when user places measurement on a point, show `±X m` error margin derived from propagated uncertainty (not a fabricated generic value).
+- **Definition of Done:** Test point at depth=10m with GPS sigma=1m produces plausible position_uncertainty; measurement tool displays non-trivial per-measurement error margins derived from actual propagated uncertainty.
+
+### TASK-093: Near-Real-Time Fast Preview Generation Path
+- **Prerequisites:** TASK-033 (Scale Calibration) completed.
+- **Phase:** 5 (Monocular Depth) / 7 (Fusion), inserted after TASK-033.
+- **Description:** Implement a fast preview pipeline that produces a coarse 3D point cloud preview for the user within minutes of starting reconstruction, before the full high-quality pipeline completes.
+- **Implementation Steps:**
+  1. In `workers/preview/fast_preview.py`, implement `FastPreviewPipeline`.
+  2. **Fast preview path:** Use every Nth keyframe (N=5 for BALANCED, N=10 for HIGH) instead of all keyframes; use half-resolution depth maps; skip semantic segmentation; skip outlier filtering.
+  3. Back-project fast depth maps using estimated poses; produce a coarse sparse point cloud.
+  4. Upload coarse point cloud to S3 interim at `jobs/{job_id}/interim/preview/`.
+  5. Emit WebSocket message `stage = "PREVIEW_READY"` with S3 URL of coarse point cloud.
+  6. The fast preview path is marked as `quality = PREVIEW` in all metadata; it is never confused with the final reconstruction.
+  7. **Latency benchmarks (targets, not guarantees):**
+     - Upload to preview available: [BENCHMARK TARGET] < 3 minutes on g5.xlarge for 5-minute 4K video.
+     - Coarse point cloud density: [BENCHMARK TARGET] ~100K-500K points for typical scene.
+  8. Continue full pipeline in parallel; replace preview with final reconstruction when complete.
+- **Definition of Done:** Test run shows PREVIEW_READY WebSocket event before COMPLETED event; coarse point cloud visible in viewer; preview clearly labeled as PREVIEW quality; final reconstruction replaces it upon completion.
+
+### TASK-094: Observation State Propagation Through Mesh & 3D Tiles
+- **Prerequisites:** TASK-047 (Mesh Topology Cleanup) completed.
+- **Phase:** 8 (Mesh & Texturing), inserted after TASK-047.
+- **Description:** Ensure the full 6-state ObservationState enum propagates from point cloud through the mesh, GLB export, and 3D Tiles feature tables so the viewer can filter by observation state at runtime.
+- **Implementation Steps:**
+  1. In `workers/mesh/observation_propagator.py`, implement `ObservationStatePropagator`.
+  2. **Point cloud → mesh face:** For each triangular face, sample observation states of its supporting points; assign the worst-case state (hierarchy: OBSERVED > PARTIAL > LOW_CONFIDENCE > INFERRED > UNKNOWN > DYNAMIC_EXCLUDED).
+  3. **Mesh → GLB:** Store observation state as a custom vertex attribute `_OBSERVATION_STATE` (uint8) in the glTF binary asset. Integer-to-state mapping: 0=OBSERVED, 1=PARTIAL, 2=INFERRED, 3=UNKNOWN, 4=DYNAMIC_EXCLUDED, 5=LOW_CONFIDENCE.
+  4. **Mesh → 3D Tiles:** In each B3DM/GLB tile, include observation state as a Batch Table attribute `observationState` per feature (building/surface).
+  5. **Viewer integration:** CesiumJS reads `_OBSERVATION_STATE` attribute via custom shader; TASK-072 layer filters use this attribute to show/hide geometry by state.
+  6. Write validation check: sum of face counts per state must equal total face count.
+- **Definition of Done:** Exported GLB contains `_OBSERVATION_STATE` vertex attribute; Three.js/glTF viewer shows non-zero values for INFERRED faces; 3D Tiles batch table contains observationState field; TASK-072 layer panel correctly controls visibility by state.
+
+### TASK-095: Digital Twin Metadata Schema & Versioned Export
+- **Prerequisites:** TASK-056 (Pipeline Completion) completed.
+- **Phase:** 9 (Georeferencing & Tiles), inserted after TASK-056.
+- **Description:** Implement digital twin readiness by adding stable object identifiers, reconstruction versioning, sensor configuration snapshots, source video references, and semantic metadata into the model export package.
+- **Implementation Steps:**
+  1. In `workers/orchestrator/digital_twin_builder.py`, implement `DigitalTwinBuilder`.
+  2. Produce `digital_twin_manifest.json` alongside the 3D model containing:
+     ```json
+     {
+       "schema_version": "1.0",
+       "reconstruction_id": "<uuid>",
+       "reconstruction_version": 1,
+       "reconstruction_timestamp": "2026-09-08T01:30:00Z",
+       "source_video": {"filename": "...", "s3_key": "...", "duration_s": 300},
+       "sensor_configuration": {
+         "camera_model": "DJI Mavic 3",
+         "calibration_source": "KNOWN_PROFILE",
+         "calibration_confidence": 80,
+         "positioning_mode": "GPS_IMU",
+         "has_imu": true,
+         "has_barometric_altitude": true,
+         "has_rtk": false
+       },
+       "coordinate_reference_system": "EPSG:4326",
+       "bounding_box": {...},
+       "accuracy": {
+         "positioning_mode": "GPS_IMU",
+         "estimated_horizontal_uncertainty_m": 0.45,
+         "estimated_vertical_uncertainty_m": 0.70,
+         "ground_control_used": false
+       },
+       "semantic_objects": [
+         {"object_id": "bldg-001", "class": "BUILDING", "height_m": 18.2, "confidence": 94, "observation_state": "OBSERVED"}
+       ]
+     }
+     ```
+  3. `reconstruction_version` auto-increments on each re-reconstruction of the same flight.
+  4. Upload `digital_twin_manifest.json` to S3 model directory alongside GLB/LAS/GeoTIFF.
+  5. Store `reconstruction_version` and `sensor_config_json` in the `models` DB table.
+- **Definition of Done:** `digital_twin_manifest.json` validates against schema; reconstruction_version increments on re-run; all required fields present including sensor_configuration and source_video.
+
+---
+
+## Phase 15: Ground-Truth Validation Framework
+
+### TASK-096: Ground-Truth Validation Framework & Machine-Readable Benchmark Reports
+- **Prerequisites:** TASK-087 completed (complete platform deployed and benchmarked).
+- **Description:** Implement a dedicated ground-truth validation capability that compares reconstructed output against known reference data and produces machine-readable benchmark_result.json reports with per-metric pass/fail evaluation. This is distinct from TASK-087 which runs the benchmark; TASK-096 provides the validation infrastructure and reference dataset pipeline.
+- **Implementation Steps:**
+  1. In `scripts/validation/ground_truth_validator.py`, implement `GroundTruthValidator`.
+  2. **Reference data sources (any of):** Survey-grade 3D model, LiDAR scan, RTK-measured check points, known building dimensions, high-accuracy orthophoto.
+  3. **Validation metrics:**
+     - Horizontal RMSE (camera centers vs reference positions)
+     - Vertical RMSE
+     - Absolute position error (ATE)
+     - Scale error % (reference known distance vs reconstructed)
+     - Building height error vs measured heights
+     - Surface completeness % (what % of reference surface has reconstruction within 0.5m)
+     - Mean point density (pts/m2)
+     - Mean reprojection error (px)
+     - Trajectory error (path length vs reference path)
+     - Dynamic object removal quality (manual annotation vs mask overlap)
+  4. Produce machine-readable output:
+     ```json
+     {
+       "benchmark_id": "<uuid>",
+       "timestamp": "...",
+       "dataset": "urban_test_01",
+       "positioning_mode": "GPS_IMU",
+       "horizontal_rmse_m": 0.38,
+       "vertical_rmse_m": 0.61,
+       "scale_error_pct": 1.2,
+       "surface_completeness_pct": 72.4,
+       "mean_reprojection_error_px": 1.1,
+       "dynamic_removal_iou": 0.91,
+       "pass": true,
+       "metric_gates": {
+         "horizontal_rmse_m": {"target": 0.5, "measured": 0.38, "pass": true},
+         "vertical_rmse_m": {"target": 0.75, "measured": 0.61, "pass": true}
+       }
+     }
+     ```
+  5. All benchmark values are measured, not fabricated. If reference data is unavailable for a metric, that metric is omitted from the report with `"status": "NO_REFERENCE_DATA"`.
+  6. Integrate validation into CI: `pytest scripts/validation/` runs validator against reference dataset on merge to `main`.
+- **Definition of Done:** Validator produces valid `benchmark_result.json` against provided reference dataset; no metrics fabricated; CI gate fails if measured RMSE exceeds 2x benchmark target.
+
+### TASK-097: Accuracy Claims Audit, Target Documentation & Benchmark CI Gate
+- **Prerequisites:** TASK-096 completed.
+- **Phase:** 14/15 (Cloud & Production / Validation).
+- **Description:** Create a permanent `docs/accuracy_claims.md` document auditing every numerical claim in the codebase and documentation, converting any unvalidated guarantees to labeled [BENCHMARK TARGET] or [ASPIRATIONAL]. Integrate as a mandatory CI check.
+- **Implementation Steps:**
+  1. In `docs/accuracy_claims.md`, document the full accuracy claims audit table from the requirements audit.
+  2. Add CI check in `.github/workflows/ci.yml`: grep codebase for patterns `"guaranteed"`, `"always achieve"`, `"exact"`, `"perfect"` in reconstruction-related docs/comments; fail CI if found without `[BENCHMARK TARGET]` or `[ASPIRATIONAL]` prefix.
+  3. Require benchmark_result.json from TASK-096 to be committed to `benchmarks/` directory on each release.
+  4. Any claim in the system that cannot be backed by a committed benchmark_result.json must be labeled [ASPIRATIONAL].
+  5. Add `ACCURACY_DISCLAIMER.md` at root: explains that reconstruction accuracy depends on input quality (GPS, calibration, video quality, scene complexity) and that all numbers are measured benchmarks on specific datasets, not universal guarantees.
+- **Definition of Done:** `docs/accuracy_claims.md` exists and covers all 10 audited claims; CI grep check active; `ACCURACY_DISCLAIMER.md` created at repo root; any future PR adding unqualified accuracy guarantees fails CI.
+
+---
+
+## Task Verification & Progression Matrix (Updated)
 
 | Phase | Tasks | Key Deliverable | Primary Tech | Verification Criteria |
 |---|---|---|---|---|
-| **1. Scaffolding & Schemas** | `TASK-001` - `TASK-008` | Monorepo, shared schemas, local DB/Redis/MinIO | pnpm, Turborepo, Pydantic, Docker | `docker compose up` healthy, schema tests pass |
+| **1. Scaffolding & Schemas** | `TASK-001` - `TASK-008` | Monorepo, 7 schema files (ObservationState 6-state, BarometerRecord, CameraCalibration, PositioningMode), local DB/Redis/MinIO | pnpm, Turborepo, Pydantic, Docker | `docker compose up` healthy; all new schema files tested |
 | **2. Control Plane API** | `TASK-009` - `TASK-017` | REST API, Auth0 RBAC, S3 upload URLs, WebSockets | FastAPI, SQLAlchemy, PostGIS, Auth0 | Auth enforced, signed URLs work, WS streams |
-| **3. Flight Ingestion** | `TASK-018` - `TASK-023` | Video/GPS validation, quality scoring (0-100) | OpenCV, FFprobe, Shapely | Quality report generated, bad inputs flagged |
-| **4. Pose & Keyframes** | `TASK-024` - `TASK-029` | Blur-free keyframes, 6-DoF camera poses, CZML | OpenCV, SIFT, GTSAM, CZML | Reprojection error < 1px, cyan flight path |
-| **5. Monocular Depth** | `TASK-030` - `TASK-034` | Metric depth maps + confidence fields | PyTorch, CUDA, Depth Anything V2 | Millimetric depth saved, scale aligned to GPS |
-| **6. Semantics & Dynamic** | `TASK-035` - `TASK-039` | Semantic scene masks, moving object removal | SegFormer, ByteTrack | Moving cars masked, static structures retained |
-| **7. 3D Fusion & Point Cloud**| `TASK-040` - `TASK-045` | Fused 3D point cloud, LAS/LAZ/PLY export | Open3D, PDAL | Clean point cloud, ASPRS classes, no ghost points |
-| **8. Mesh & Texturing** | `TASK-046` - `TASK-051` | Screened Poisson mesh, seamless UV atlases | Open3D, xatlas, Draco, GLB | Watertight mesh, LOD 0/1/2, seamless textures |
-| **9. Georeferencing & Tiles** | `TASK-052` - `TASK-056` | WGS84/UTM coordinates, GeoTIFF, 3D Tiles | GDAL, PostGIS, OGC 3D Tiles | RMSE report generated, 3D Tiles in ECEF |
+| **3. Flight Ingestion** | `TASK-018` - `TASK-023`, `TASK-088`, `TASK-089` | VideoQualityReport (7 components), photometric normalization, shadow masks, quality gate | OpenCV, FFprobe, CLAHE | Full report generated; shadow masks produced; compression artifacts scored; bad inputs flagged |
+| **4. Pose & Keyframes** | `TASK-024` - `TASK-029`, `TASK-090`, `TASK-091` | Blur-free keyframes, calibration hierarchy (3-tier), RTK/PPK integration, 6-DoF poses + uncertainty, PositioningMode, CZML | SuperPoint, GTSAM, RTKLib | PositioningMode classified; calibration_source set; pose sigma per camera estimated |
+| **5. Monocular Depth** | `TASK-030` - `TASK-034`, `TASK-092`, `TASK-093` | Metric depth maps + uncertainty chain, fast preview point cloud | PyTorch, CUDA, Depth Anything V2 | Uncertainty propagated GPS→pose→depth→3D; preview available < 3 min |
+| **6. Semantics & Dynamic** | `TASK-035` - `TASK-039` | 11-class semantic masks (incl. ANIMAL, DYNAMIC_OBJECT), moving object removal | SegFormer, ByteTrack | All 11 classes detected; animals/DYNAMIC_OBJECT handled |
+| **7. 3D Fusion & Point Cloud** | `TASK-040` - `TASK-045` | Fused 3D point cloud with 6-state ObservationState attributes, LAS/LAZ/PLY export | Open3D, PDAL | 6 states on all points; DYNAMIC_EXCLUDED matches mask footprint; no ghost points |
+| **8. Mesh & Texturing** | `TASK-046` - `TASK-051`, `TASK-094` | Poisson mesh, 6-state observation_state on faces/GLB/3D Tiles, shadow-aware textures | Open3D, xatlas, Draco | `_OBSERVATION_STATE` in GLB; state in 3D Tiles batch table; shadow-aware seam blending |
+| **9. Georeferencing & Tiles** | `TASK-052` - `TASK-056`, `TASK-095` | WGS84/UTM, GeoTIFF, 3D Tiles, AccuracyReport (measured not guaranteed), digital_twin_manifest.json | GDAL, PostGIS, OGC 3D Tiles | RMSE measured; positioning_mode in report; DT manifest valid JSON |
 | **10. UI Design System** | `TASK-057` - `TASK-063` | Bubblegum Pink & Deep Teal component library | Next.js 16, Tailwind, Inter font | Brand colors active, primitives accessible |
-| **11. Frontend Core Views** | `TASK-064` - `TASK-069` | Dashboard, Upload, Pre-Flight Quality, Progress | React Query, Radix UI | Upload to S3 works, realtime progress bar active |
-| **12. CesiumJS 3D Viewer** | `TASK-070` - `TASK-076` | 3D Tiles streaming, measurements, quality panel | CesiumJS, WebGL | >=30 FPS, distance/height error HUD, layers |
-| **13. Exports & Lifecycle** | `TASK-077` - `TASK-080` | GLB/LAS/GeoTIFF exports, secure downloads | S3 presigned URLs, Python zip | Zip generated, audit logged, scratch pruned |
-| **14. Cloud & Benchmarks** | `TASK-081` - `TASK-087` | Terraform, EKS, Karpenter GPU, benchmark suite | Terraform, Karpenter, OpenTelemetry | Horiz RMSE $\le 0.5m$, Vert RMSE $\le 0.75m$ |
+| **11. Frontend Core Views** | `TASK-064` - `TASK-069` | Dashboard, Upload, Pre-Flight Quality (7 scores incl. compression/shadow), Progress + preview | React Query, Radix UI | All 7 quality sub-scores shown; fast preview visible before final |
+| **12. CesiumJS 3D Viewer** | `TASK-070` - `TASK-076` | 3D Tiles streaming, 6-state observation filter panel, component confidence display, positioning mode badge | CesiumJS, WebGL | >= 30 FPS; all 6 states filterable; accuracy panel shows MEASURED labels |
+| **13. Exports & Lifecycle** | `TASK-077` - `TASK-080` | GLB/LAS/GeoTIFF exports with DT metadata, secure downloads | S3 presigned URLs, Python zip | digital_twin_manifest.json in export zip; audit logged; scratch pruned |
+| **14. Cloud & Benchmarks** | `TASK-081` - `TASK-087`, `TASK-097` | Terraform, EKS, Karpenter GPU, accuracy claims audit CI gate, ACCURACY_DISCLAIMER.md | Terraform, Karpenter, OpenTelemetry | CI rejects unqualified accuracy guarantees; benchmark_result.json committed |
+| **15. Validation** | `TASK-096` | Ground-truth validator, machine-readable benchmark_result.json, per-metric pass/fail | PDAL, NumPy, pytest | RMSE computed vs reference; no fabricated values; CI gate on RMSE regression |
