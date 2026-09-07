@@ -17,7 +17,7 @@
 
 ## Phase 1: Environment, Monorepo Architecture & Shared Data Contracts
 
-### TASK-001: Initialize Monorepo Architecture and Workspace Tooling
+### TASK-001: Initialize Monorepo Architecture and Workspace Tooling [COMPLETED]
 - **Prerequisites:** Git, Node.js 22 LTS, Python 3.12+, Docker Desktop / Podman installed locally.
 - **Description:** Set up the foundational monorepo directory layout supporting both the web frontend (`apps/web`), backend API (`apps/api`), asynchronous reconstruction workers (`workers/`), shared packages (`packages/`), and infrastructure (`infra/`).
 - **Implementation Steps:**
