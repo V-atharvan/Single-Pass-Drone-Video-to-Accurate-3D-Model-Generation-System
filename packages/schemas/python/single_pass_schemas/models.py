@@ -24,6 +24,26 @@ class ConfidenceLevel(str, Enum):
     LOW = "LOW"
 
 
+class PositioningMode(str, Enum):
+    """Authoritative positioning sensor configuration from PRD Section 39."""
+
+    RTK_PPK = "RTK_PPK"
+    RTK = "RTK"
+    GPS_IMU = "GPS_IMU"
+    GPS_ONLY = "GPS_ONLY"
+    GPS_DEGRADED = "GPS_DEGRADED"
+    VISUAL_ONLY = "VISUAL_ONLY"
+
+
+class ScaleSource(str, Enum):
+    """Source of absolute metric scale estimation."""
+
+    RTK = "RTK"
+    GPS_BASELINE = "GPS_BASELINE"
+    BAROMETRIC = "BAROMETRIC"
+    VISUAL_ONLY = "VISUAL_ONLY"
+
+
 class AccuracyReport(BaseModel):
     """Quantitative reconstruction accuracy report matching PRD Section 39."""
 
@@ -40,6 +60,14 @@ class AccuracyReport(BaseModel):
     geolocation_confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
     warnings: List[str] = Field(default_factory=list)
     reference_data_used: List[str] = Field(default_factory=list)
+
+    # Enhanced TASK-053 fields
+    positioning_mode: PositioningMode = PositioningMode.GPS_IMU
+    ground_control_used: bool = False
+    estimated_horizontal_uncertainty_m: Optional[float] = None
+    estimated_vertical_uncertainty_m: Optional[float] = None
+    scale_source: ScaleSource = ScaleSource.GPS_BASELINE
+    measurement_error_percent: Optional[float] = None
 
     @model_validator(mode="after")
     def validate_surface_sum(self) -> "AccuracyReport":

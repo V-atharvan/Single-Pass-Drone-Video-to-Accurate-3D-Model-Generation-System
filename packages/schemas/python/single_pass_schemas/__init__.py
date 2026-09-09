@@ -26,6 +26,8 @@ from .quality import (
 from .models import (
     ObservationState,
     ConfidenceLevel,
+    PositioningMode,
+    ScaleSource,
     AccuracyReport,
     MeasurementType,
     MeasurementResult,
@@ -59,6 +61,8 @@ __all__ = [
     # Models
     "ObservationState",
     "ConfidenceLevel",
+    "PositioningMode",
+    "ScaleSource",
     "AccuracyReport",
     "MeasurementType",
     "MeasurementResult",
@@ -67,3 +71,4 @@ __all__ = [
     "BoundingBox",
     "ModelMetadata",
 ]
+

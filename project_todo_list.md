@@ -476,7 +476,7 @@
 
 ## Phase 6: Semantic Scene Understanding & Dynamic Object Removal
 
-### TASK-035: Semantic Segmentation Pipeline Setup [ENHANCED]
+### TASK-035: Semantic Segmentation Pipeline Setup [COMPLETED] [ENHANCED]
 - **Prerequisites:** TASK-034 completed.
 - **Description:** Deploy a lightweight, accurate semantic segmentation model (e.g. SegFormer / Mask2Former) classifying scene regions into target geospatial categories. Enhanced to include animal and general dynamic-object fallback classes.
 - **Implementation Steps:**
@@ -489,7 +489,7 @@
 
 ---
 
-### TASK-036: Dynamic Object Detection & Multi-Frame Motion Tracking [ENHANCED]
+### TASK-036: Dynamic Object Detection & Multi-Frame Motion Tracking [COMPLETED] [ENHANCED]
 - **Prerequisites:** TASK-035 completed.
 - **Description:** Identify moving vehicles, people, animals, and general dynamic objects across sequential frames to prevent phantom/ghost geometry in the 3D reconstruction.
 - **Implementation Steps:**
@@ -502,7 +502,7 @@
 
 ---
 
-### TASK-037: Dynamic Object Mask Generation & Dilation
+### TASK-037: Dynamic Object Mask Generation & Dilation [COMPLETED]
 - **Prerequisites:** TASK-036 completed.
 - **Description:** Generate dilated binary exclusion masks for all dynamic entities to ensure complete exclusion during 3D point cloud back-projection.
 - **Implementation Steps:**
@@ -513,7 +513,7 @@
 
 ---
 
-### TASK-038: Semantic Mask Association & Mask Pyramid Builder
+### TASK-038: Semantic Mask Association & Mask Pyramid Builder [COMPLETED]
 - **Prerequisites:** TASK-037 completed.
 - **Description:** Merge static semantic classification with dynamic exclusion masks into a unified multi-channel semantic tensor per keyframe.
 - **Implementation Steps:**
@@ -523,7 +523,7 @@
 
 ---
 
-### TASK-039: Semantic and Dynamic Mask Serialization to Storage
+### TASK-039: Semantic and Dynamic Mask Serialization to Storage [COMPLETED]
 - **Prerequisites:** TASK-038 completed.
 - **Description:** Save final semantic masks to scratch NVMe and upload sample previews to S3 interim storage.
 - **Implementation Steps:**
@@ -536,7 +536,7 @@
 
 ## Phase 7: 3D Point Cloud Fusion, Surface Completion & Outlier Filtering
 
-### TASK-040: Depth Unprojection and Point Cloud Back-Projection
+### TASK-040: Depth Unprojection and Point Cloud Back-Projection [COMPLETED]
 - **Prerequisites:** TASK-039 completed.
 - **Description:** Unproject calibrated 2D metric depth maps into 3D camera coordinates and transform them to global coordinates using 6-DoF poses.
 - **Implementation Steps:**
@@ -548,7 +548,7 @@
 
 ---
 
-### TASK-041: Multi-Frame Point Cloud Fusion with Confidence Weighting
+### TASK-041: Multi-Frame Point Cloud Fusion with Confidence Weighting [COMPLETED]
 - **Prerequisites:** TASK-040 completed.
 - **Description:** Fuse individual point sets into a consolidated global point cloud, applying confidence weights and multi-view visibility verification.
 - **Implementation Steps:**
@@ -560,7 +560,7 @@
 
 ---
 
-### TASK-042: Dynamic Object & Statistical Outlier Removal
+### TASK-042: Dynamic Object & Statistical Outlier Removal [COMPLETED]
 - **Prerequisites:** TASK-041 completed.
 - **Description:** Cleanse the fused point cloud by stripping out points falling inside dynamic masks and removing floating sky/edge artifacts using Open3D.
 - **Implementation Steps:**
@@ -571,7 +571,7 @@
 
 ---
 
-### TASK-043: Voxel Downsampling and Normal Vector Estimation
+### TASK-043: Voxel Downsampling and Normal Vector Estimation [COMPLETED]
 - **Prerequisites:** TASK-042 completed.
 - **Description:** Resample the cleaned point cloud to a uniform spatial density and compute accurate surface normal vectors.
 - **Implementation Steps:**
@@ -582,7 +582,7 @@
 
 ---
 
-### TASK-044: Occlusion Analysis and Surface Observation State Tagging [ENHANCED]
+### TASK-044: Occlusion Analysis and Surface Observation State Tagging [COMPLETED] [ENHANCED]
 - **Prerequisites:** TASK-043 completed.
 - **Description:** Analyze viewing ray visibility to categorize every region of the 3D scene into the full 6-state observation state per the ObservationState enum from TASK-002.
 - **Implementation Steps:**
@@ -599,7 +599,7 @@
 
 ---
 
-### TASK-045: LAS/LAZ and PLY Point Cloud Serializer
+### TASK-045: LAS/LAZ and PLY Point Cloud Serializer [COMPLETED]
 - **Prerequisites:** TASK-044 completed.
 - **Description:** Export georeferenced, classified point clouds into standard GIS LAS/LAZ and PLY formats using PDAL and Open3D.
 - **Implementation Steps:**
@@ -619,7 +619,7 @@
 
 ## Phase 8: Mesh Reconstruction, Texturing & LOD Generation
 
-### TASK-046: Surface Mesh Reconstruction Engine
+### TASK-046: Surface Mesh Reconstruction Engine [COMPLETED]
 - **Prerequisites:** TASK-045 completed.
 - **Description:** Generate a continuous 3D triangular surface mesh from the oriented point cloud using Screened Poisson Surface Reconstruction.
 - **Implementation Steps:**
@@ -630,7 +630,7 @@
 
 ---
 
-### TASK-047: Mesh Topology Cleanup, Non-Manifold Removal & Hole Infilling
+### TASK-047: Mesh Topology Cleanup, Non-Manifold Removal & Hole Infilling [COMPLETED]
 - **Prerequisites:** TASK-046 completed.
 - **Description:** Clean mesh topology to guarantee 2-manifold surface properties and apply localized hole filling with AI inference tagging.
 - **Implementation Steps:**
@@ -641,7 +641,7 @@
 
 ---
 
-### TASK-048: Keyframe Raycasting & Optimal View Selection for Texturing
+### TASK-048: Keyframe Raycasting & Optimal View Selection for Texturing [COMPLETED]
 - **Prerequisites:** TASK-047 completed.
 - **Description:** For every triangular face on the 3D mesh, select the sharpest, least-occluded source keyframe with the most orthogonal viewing angle.
 - **Implementation Steps:**
@@ -655,7 +655,7 @@
 
 ---
 
-### TASK-049: Exposure Correction, Seam Blending & Texture Atlas Baking
+### TASK-049: Exposure Correction, Seam Blending & Texture Atlas Baking [COMPLETED]
 - **Prerequisites:** TASK-048 completed.
 - **Description:** Parameterize UV coordinates, equalize exposure and white balance across differing source frames, and bake seamless texture atlases.
 - **Implementation Steps:**
@@ -666,7 +666,7 @@
 
 ---
 
-### TASK-050: Multi-Resolution Level-of-Detail (LOD) Decimation
+### TASK-050: Multi-Resolution Level-of-Detail (LOD) Decimation [COMPLETED]
 - **Prerequisites:** TASK-049 completed.
 - **Description:** Generate optimized, multi-resolution mesh levels (LOD 0, LOD 1, LOD 2) for smooth streaming and rendering in WebGL.
 - **Implementation Steps:**
@@ -679,7 +679,7 @@
 
 ---
 
-### TASK-051: GLB, glTF, and OBJ Mesh Exporter
+### TASK-051: GLB, glTF, and OBJ Mesh Exporter [COMPLETED]
 - **Prerequisites:** TASK-050 completed.
 - **Description:** Export textured 3D models into industry-standard GLB (binary glTF with embedded textures) and OBJ formats.
 - **Implementation Steps:**
